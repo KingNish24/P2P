@@ -127,10 +127,20 @@ if (!isPthread) {
       message: 'Loading LFM2.5-VL-450M (q4f16 WebGPU)...'
     });
 
-    const progressCallback = (item) => {
+    const MODEL_FILE_COUNT = 3;
+    const progressMap = new Map();
+    const progressCallback = (info) => {
+      if (info.status !== 'progress' || !info.file?.endsWith('.onnx_data') || !info.total) {
+        return;
+      }
+      progressMap.set(info.file, info.loaded / info.total);
+      const totalProgress = (Array.from(progressMap.values()).reduce((sum, v) => sum + v, 0) / MODEL_FILE_COUNT) * 100;
       self.postMessage({
         type: 'progress',
-        progress: item
+        progress: {
+          file: info.file,
+          progress: Math.min(100, Math.round(totalProgress))
+        }
       });
     };
 
@@ -140,7 +150,11 @@ if (!isPthread) {
       });
 
       model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
-        dtype: DTYPE,
+        dtype: {
+          vision_encoder: 'fp16',
+          embed_tokens: 'fp16',
+          decoder_model_merged: 'q4f16'
+        },
         device: 'webgpu',
         progress_callback: progressCallback
       });
@@ -259,7 +273,9 @@ Respond strictly in JSON matching the schema with reasoning as the first propert
         });
 
         // 3. Prepare inputs with correct argument order (images, text)
-        const inputs = await processor(rawImage, promptText);
+        const inputs = await processor(rawImage, promptText, {
+          add_special_tokens: false
+        });
 
         let rawTokens = '';
         const streamer = new TextStreamer(processor.tokenizer, {
@@ -278,6 +294,7 @@ Respond strictly in JSON matching the schema with reasoning as the first propert
         const output = await model.generate({
           ...inputs,
           max_new_tokens: 1024,
+          repetition_penalty: 1.08,
           do_sample: false,
           streamer: streamer,
           logits_processor: [structuredProcessor]
