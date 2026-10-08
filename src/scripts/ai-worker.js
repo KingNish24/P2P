@@ -1,7 +1,6 @@
 import {
-  AutoTokenizer,
+  AutoProcessor,
   AutoModelForImageTextToText,
-  Gemma4ImageProcessor,
   RawImage,
   TextStreamer,
   env
@@ -16,11 +15,10 @@ if (!isPthread) {
   env.backends.onnx.wasm.numThreads = 1;
   env.backends.onnx.wasm.proxy = false;
 
-  const MODEL_ID = 'onnx-community/gemma-4-E2B-it-qat-mobile-ONNX';
-  const DTYPE = 'q2f16';
+  const MODEL_ID = 'onnx-community/LFM2.5-VL-450M-ONNX';
+  const DTYPE = 'q4f16';
 
-  let tokenizer = null;
-  let imageProcessor = null;
+  let processor = null;
   let model = null;
   let structuredProcessor = null;
 
@@ -101,14 +99,14 @@ if (!isPthread) {
   };
 
   async function loadModel() {
-    if (tokenizer && model && imageProcessor) {
-      return { tokenizer, model, imageProcessor };
+    if (processor && model) {
+      return { processor, model };
     }
 
     self.postMessage({
       type: 'status',
       status: 'loading',
-      message: 'Loading Gemma 4 E2B (q2f16 WebGPU)...'
+      message: 'Loading LFM2.5-VL-450M (q4f16 WebGPU)...'
     });
 
     const progressCallback = (item) => {
@@ -119,19 +117,8 @@ if (!isPthread) {
     };
 
     try {
-      tokenizer = await AutoTokenizer.from_pretrained(MODEL_ID, {
+      processor = await AutoProcessor.from_pretrained(MODEL_ID, {
         progress_callback: progressCallback
-      });
-
-      imageProcessor = new Gemma4ImageProcessor({
-        max_soft_tokens: 280,
-        patch_size: 16,
-        pooling_kernel_size: 3,
-        resample: 3,
-        rescale_factor: 0.00392156862745098,
-        do_rescale: true,
-        do_resize: true,
-        do_convert_rgb: true
       });
 
       model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
@@ -140,7 +127,7 @@ if (!isPthread) {
         progress_callback: progressCallback
       });
 
-      structuredProcessor = new StructuredOutputProcessor(tokenizer, {
+      structuredProcessor = new StructuredOutputProcessor(processor.tokenizer, {
         type: 'json_schema',
         json_schema: DIAGNOSIS_SCHEMA
       });
@@ -148,12 +135,12 @@ if (!isPthread) {
       self.postMessage({
         type: 'status',
         status: 'ready',
-        message: 'Gemma 4 E2B WebGPU loaded and ready!'
+        message: 'LFM2.5-VL-450M WebGPU loaded and ready!'
       });
 
-      return { tokenizer, model, imageProcessor };
+      return { processor, model };
     } catch (err) {
-      console.error('Failed to load Gemma 4 model:', err);
+      console.error('Failed to load LFM2.5-VL model:', err);
       self.postMessage({
         type: 'error',
         message: `${err.name || 'Error'}: ${err.message || 'Error initializing WebGPU model.'}`
@@ -163,7 +150,6 @@ if (!isPthread) {
   }
 
   self.addEventListener('message', async (event) => {
-    // Only handle app messages with a known type
     if (!event.data || typeof event.data !== 'object') return;
     const { type, data } = event.data;
     if (!type || (type !== 'load' && type !== 'analyze')) return;
@@ -179,7 +165,7 @@ if (!isPthread) {
 
     if (type === 'analyze') {
       try {
-        if (!model || !tokenizer || !imageProcessor) {
+        if (!model || !processor) {
           await loadModel();
         }
 
@@ -188,20 +174,14 @@ if (!isPthread) {
         self.postMessage({
           type: 'status',
           status: 'analyzing',
-          message: 'Gemma reasoning over crop symptoms...'
+          message: 'LFM2.5-VL reasoning over crop symptoms...'
         });
 
-        let imageInputs = null;
-        let softTokenCount = 280;
-        if (image) {
-          const imageBlob = dataUrlToBlob(image);
-          const rawImage = await RawImage.fromBlob(imageBlob);
-          imageInputs = await imageProcessor(rawImage);
-          if (imageInputs.num_soft_tokens_per_image && imageInputs.num_soft_tokens_per_image[0]) {
-            softTokenCount = imageInputs.num_soft_tokens_per_image[0];
-          }
-        }
+        // 1. Process image
+        const imageBlob = dataUrlToBlob(image);
+        const rawImage = await RawImage.fromBlob(imageBlob);
 
+        // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
 Examine this crop leaf carefully.
 In the "reasoning" field, deduce step-by-step:
@@ -211,12 +191,26 @@ In the "reasoning" field, deduce step-by-step:
 ${userNote ? `Farmer Note: "${userNote}"` : ''}
 Respond strictly in JSON matching the schema with reasoning as the first property.`;
 
-        const promptWithImage = `<|turn>user\n<|boi|>${'<|image|>'.repeat(softTokenCount)}<|eoi|>\n${systemPrompt}<turn|>\n<|turn>model\n`;
+        const messages = [
+          {
+            role: 'user',
+            content: [
+              { type: 'image' },
+              { type: 'text', text: systemPrompt }
+            ]
+          }
+        ];
 
-        const textInputs = tokenizer(promptWithImage);
+        const promptText = processor.apply_chat_template(messages, {
+          tokenize: false,
+          add_generation_prompt: true
+        });
+
+        // 3. Prepare inputs with correct argument order (images, text)
+        const inputs = await processor(rawImage, promptText);
 
         let rawTokens = '';
-        const streamer = new TextStreamer(tokenizer, {
+        const streamer = new TextStreamer(processor.tokenizer, {
           skip_prompt: true,
           skip_special_tokens: true,
           callback_function: (token) => {
@@ -229,21 +223,15 @@ Respond strictly in JSON matching the schema with reasoning as the first propert
           }
         });
 
-        const generateInputs = {
-          ...textInputs,
+        const output = await model.generate({
+          ...inputs,
           max_new_tokens: 1024,
           do_sample: false,
           streamer: streamer,
           logits_processor: [structuredProcessor]
-        };
+        });
 
-        if (imageInputs?.pixel_values) {
-          generateInputs.pixel_values = imageInputs.pixel_values;
-        }
-
-        const output = await model.generate(generateInputs);
-
-        const decoded = tokenizer.batch_decode(output, { skip_special_tokens: true });
+        const decoded = processor.tokenizer.batch_decode(output, { skip_special_tokens: true });
         const fullText = (decoded[0] || rawTokens).trim();
 
         let structuredResult = null;

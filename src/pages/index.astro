@@ -7,7 +7,7 @@ import Layout from '../layouts/Layout.astro';
 		<!-- Minimalist Header -->
 		<header class="mb-8">
 			<div class="flex items-center justify-between mb-3">
-				<span class="text-xs font-mono uppercase tracking-widest text-emerald-400">PhytoAI &middot; Gemma 4 WebGPU</span>
+				<span class="text-xs font-mono uppercase tracking-widest text-emerald-400">PhytoAI &middot; LFM2.5-VL WebGPU</span>
 				<div id="webgpu-badge" class="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-full">
 					<span id="webgpu-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
 					<span id="webgpu-status">WebGPU</span>
@@ -17,7 +17,7 @@ import Layout from '../layouts/Layout.astro';
 				Crop Disease &amp; Treatment
 			</h1>
 			<p class="text-sm text-slate-400">
-				On-device agricultural diagnosis powered by <span class="text-slate-200">Gemma 4 E2B QAT (q2f16)</span>.
+				On-device agricultural diagnosis powered by <span class="text-slate-200">LFM2.5-VL-450M (q4f16)</span>.
 			</p>
 
 			<!-- Loading / Progress bar / Error banner -->
@@ -77,7 +77,7 @@ import Layout from '../layouts/Layout.astro';
 			<div class="flex items-center justify-between text-xs text-slate-400 font-mono">
 				<span class="flex items-center gap-1.5 text-indigo-400">
 					<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-					Gemma Reasoning (CoT)
+					LFM2.5 Reasoning (CoT)
 				</span>
 				<span id="token-counter">0 tokens</span>
 			</div>

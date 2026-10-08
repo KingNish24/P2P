@@ -21,7 +21,10 @@
     "tailwindcss": "^4.3.3"
   },
   "allowScripts": {
-    "esbuild": true
+    "esbuild": true,
+    "workerd": true,
+    "onnxruntime-node": true,
+    "protobufjs": true
   },
   "devEngines": {
     "packageManager": {
@@ -29,12 +32,6 @@
       "version": "^0.7.5",
       "onFail": "ignore"
     }
-  },
-  "allowBuilds": {
-    "esbuild": true,
-    "workerd": true,
-    "onnxruntime-node": true,
-    "protobufjs": true
   },
   "devDependencies": {
     "wrangler": "^4.148.0"
