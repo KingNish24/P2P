@@ -43,7 +43,7 @@ if (!isPthread) {
     properties: {
       reasoning: {
         type: 'string',
-        description: 'Step-by-step visual reasoning: inspect leaf discoloration, lesions, concentric rings, chlorosis, necrosis, veins, and evaluate pathogen type before reaching diagnosis. Even think about fixes and remedies too along with preventions if any disesase is present. Think hard.'
+        description: 'Step-by-step visual reasoning in detail in ASD STE100 format before reaching diagnosis. Even think about fixes and remedies too along with preventions if any disesase is present. ALso, try to identify the disease if present while thinking. Think hard.'
       },
       crop: {
         type: 'string',
@@ -282,9 +282,8 @@ Reasoning must be the first property.`;
 
         const output = await model.generate({
           ...inputs,
-          max_new_tokens: 1024,
-          repetition_penalty: 1.08,
-          do_sample: false,
+          max_new_tokens: 4096,
+          do_sample: true,
           streamer: streamer,
           logits_processor: [structuredProcessor]
         });
