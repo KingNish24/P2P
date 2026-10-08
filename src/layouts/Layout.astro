@@ -18,7 +18,10 @@ const { title = "Astro + Tailwind (Static Cloudflare)" } = Astro.props;
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 	</head>
-	<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
-		<slot />
+	<body class="bg-[#fafaf9] text-neutral-900 min-h-screen antialiased selection:bg-emerald-500 selection:text-white relative font-sans">
+		<div class="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.12),rgba(255,255,255,0))] z-0"></div>
+		<div class="relative z-10">
+			<slot />
+		</div>
 	</body>
 </html>

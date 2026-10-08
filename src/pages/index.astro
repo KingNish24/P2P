@@ -7,54 +7,57 @@ import Layout from '../layouts/Layout.astro';
 		<!-- Minimalist Header -->
 		<header class="mb-8">
 			<div class="flex items-center justify-between mb-3">
-				<span class="text-xs font-mono uppercase tracking-widest text-emerald-400">PhytoAI &middot; LFM2.5-VL WebGPU</span>
-				<div id="webgpu-badge" class="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-full">
+				<span class="text-xs font-mono uppercase tracking-widest text-emerald-600 font-semibold">PhytoAI &middot; LFM2.5-VL WebGPU</span>
+				<div id="webgpu-badge" class="flex items-center gap-1.5 text-[11px] font-mono text-neutral-700 bg-neutral-100 border border-neutral-200/80 px-2.5 py-1 rounded-full">
 					<span id="webgpu-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
 					<span id="webgpu-status">WebGPU</span>
 				</div>
 			</div>
-			<h1 class="text-3xl font-bold tracking-tight text-white mb-2">
+			<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-medium mb-3">
+				<span>🔒</span> 100% On-Device &middot; Private &middot; Zero Data Sent
+			</div>
+			<h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 mb-2">
 				Crop Disease &amp; Treatment
 			</h1>
-			<p class="text-sm text-slate-400">
-				On-device agricultural diagnosis powered by <span class="text-slate-200">LFM2.5-VL-450M (q4f16)</span>.
+			<p class="text-sm text-neutral-600">
+				On-device agricultural diagnosis powered by <span class="text-neutral-900 font-medium">LFM2.5-VL-450M (q4f16)</span>.
 			</p>
 
 			<!-- Loading / Progress bar / Error banner -->
-			<div id="progress-container" class="hidden mt-4 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
-				<div class="flex justify-between text-xs font-mono text-slate-400">
+			<div id="progress-container" class="hidden mt-4 p-4 rounded-2xl bg-white border border-neutral-200 shadow-sm space-y-2 text-neutral-700">
+				<div class="flex justify-between text-xs font-mono text-neutral-600">
 					<span id="progress-file" class="break-all">Loading model...</span>
-					<span id="progress-percent" class="text-emerald-400 font-bold ml-2">0%</span>
+					<span id="progress-percent" class="text-emerald-600 font-bold ml-2">0%</span>
 				</div>
-				<div id="progress-bar-wrap" class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+				<div id="progress-bar-wrap" class="w-full h-1.5 rounded-full bg-neutral-100 overflow-hidden">
 					<div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-150" style="width: 0%"></div>
 				</div>
 			</div>
 		</header>
 
 		<!-- Minimalist Form -->
-		<section class="space-y-6">
+		<section class="bg-white border border-neutral-200/80 shadow-sm rounded-3xl p-6 sm:p-8 space-y-6">
 			<!-- Image Input Area -->
 			<div class="space-y-2">
-				<div id="dropzone" class="relative group border border-dashed border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 text-center transition cursor-pointer bg-slate-900/50 min-h-[220px] flex flex-col items-center justify-center overflow-hidden">
+				<div id="dropzone" class="relative group border border-dashed border-neutral-300 hover:border-emerald-500 bg-neutral-50/60 hover:bg-emerald-50/30 rounded-2xl p-8 text-center transition cursor-pointer min-h-[220px] flex flex-col items-center justify-center overflow-hidden">
 					<input type="file" id="file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
 					
 					<div id="upload-placeholder" class="space-y-2">
-						<div class="w-10 h-10 rounded-full bg-slate-800/80 mx-auto flex items-center justify-center text-xl text-slate-400">
+						<div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl mx-auto shadow-xs">
 							🍃
 						</div>
-						<p class="text-xs text-slate-300 font-medium">Drop plant, crop, fruit, or leaf image here, or browse</p>
-						<p class="text-[11px] text-slate-500">Supports camera capture or file upload</p>
+						<p class="text-sm font-semibold text-neutral-900">Drop plant, crop, fruit, or leaf image here, or browse</p>
+						<p class="text-xs text-neutral-500">Supports camera capture or file upload</p>
 					</div>
 
-					<img id="image-preview" class="hidden max-h-64 max-w-full rounded-xl object-contain shadow-lg" alt="Selected Plant or Crop" />
+					<img id="image-preview" class="hidden max-h-64 max-w-full rounded-xl object-contain shadow-md" alt="Selected Plant or Crop" />
 				</div>
 
 				<div class="flex gap-2">
-					<button id="btn-camera" type="button" class="flex-1 py-2 px-3 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium transition cursor-pointer flex items-center justify-center gap-1.5">
+					<button id="btn-camera" type="button" class="flex-1 py-2.5 px-3 rounded-xl border border-neutral-200/80 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-medium transition cursor-pointer flex items-center justify-center gap-1.5">
 						<span>📷</span> Camera
 					</button>
-					<button id="btn-clear" type="button" class="hidden py-2 px-3 rounded-xl border border-rose-900/40 bg-rose-950/20 hover:bg-rose-900/40 text-rose-300 text-xs font-medium transition cursor-pointer">
+					<button id="btn-clear" type="button" class="hidden py-2.5 px-3 rounded-xl border border-rose-200/80 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium transition cursor-pointer">
 						Remove
 					</button>
 				</div>
@@ -62,11 +65,11 @@ import Layout from '../layouts/Layout.astro';
 
 			<!-- Optional Note -->
 			<div>
-				<input type="text" id="user-note" placeholder="Symptoms note (e.g. leaf spots appeared after rain)..." class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition" />
+				<input type="text" id="user-note" placeholder="Symptoms note (e.g. leaf spots appeared after rain)..." class="w-full bg-neutral-50 border border-neutral-200 text-neutral-900 placeholder-neutral-400 rounded-xl px-4 py-2.5 text-xs focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none transition" />
 			</div>
 
 			<!-- Action Button -->
-			<button id="btn-analyze" disabled type="button" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-2">
+			<button id="btn-analyze" disabled type="button" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-2">
 				<span id="btn-icon">⚡</span>
 				<span id="btn-text">Diagnose Plant</span>
 			</button>
@@ -74,72 +77,72 @@ import Layout from '../layouts/Layout.astro';
 
 		<!-- Reasoning Stream Box (First, as requested) -->
 		<section id="reasoning-section" class="hidden mt-8 space-y-2">
-			<div class="flex items-center justify-between text-xs text-slate-400 font-mono">
-				<span class="flex items-center gap-1.5 text-indigo-400">
-					<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+			<div class="flex items-center justify-between text-xs text-neutral-500 font-mono">
+				<span class="flex items-center gap-1.5 text-emerald-600 font-medium">
+					<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
 					LFM2.5 Reasoning (CoT)
 				</span>
 				<span id="token-counter">0 tokens</span>
 			</div>
-			<div id="reasoning-box" class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 font-mono text-xs text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto"></div>
+			<div id="reasoning-box" class="p-4 rounded-2xl bg-neutral-900 text-neutral-200 border border-neutral-800 font-mono text-xs shadow-md leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto"></div>
 		</section>
 
 		<!-- Minimalist Structured Result Card -->
-		<section id="result-card" class="hidden mt-8 rounded-2xl border border-slate-800 bg-slate-900/90 p-6 space-y-6">
+		<section id="result-card" class="hidden mt-8 bg-white border border-neutral-200/80 shadow-lg rounded-3xl p-6 sm:p-8 space-y-6 text-neutral-900">
 			<!-- Header -->
-			<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800">
+			<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-200/80">
 				<div>
 					<div class="flex items-center gap-2 mb-1">
 						<span id="res-status" class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider"></span>
-						<span id="res-pathogen" class="px-2 py-0.5 rounded-full text-xs bg-slate-800 text-slate-300 font-mono"></span>
-						<span id="res-confidence" class="text-xs font-mono text-slate-500"></span>
+						<span id="res-pathogen" class="px-2 py-0.5 rounded-full text-xs bg-neutral-100 text-neutral-700 font-mono border border-neutral-200"></span>
+						<span id="res-confidence" class="text-xs font-mono text-neutral-500"></span>
 					</div>
-					<h2 id="res-disease" class="text-xl font-bold text-white"></h2>
-					<p id="res-crop" class="text-xs text-slate-400"></p>
+					<h2 id="res-disease" class="text-2xl font-bold text-neutral-900"></h2>
+					<p id="res-crop" class="text-xs text-neutral-500"></p>
 				</div>
 			</div>
 
 			<!-- Symptoms -->
 			<div>
-				<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Observed Symptoms</h3>
-				<ul id="res-symptoms" class="space-y-1 text-xs text-slate-300 list-disc list-inside"></ul>
+				<h3 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Observed Symptoms</h3>
+				<ul id="res-symptoms" class="text-neutral-700 list-disc list-inside space-y-1.5 text-xs"></ul>
 			</div>
 
 			<!-- Treatments -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				<div class="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/20">
-					<h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">🌿 Organic Remedies</h3>
-					<ul id="res-organic" class="space-y-1.5 text-xs text-emerald-200/90 list-disc list-inside"></ul>
+				<div class="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950">
+					<h3 class="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-2">🌿 Organic Remedies</h3>
+					<ul id="res-organic" class="space-y-1.5 text-xs text-emerald-900 list-disc list-inside"></ul>
 				</div>
 
-				<div class="p-4 rounded-xl bg-slate-950/60 border border-cyan-500/20">
-					<h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">🧪 Chemical Controls</h3>
-					<ul id="res-chemical" class="space-y-1.5 text-xs text-cyan-200/90 list-disc list-inside"></ul>
+				<div class="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 text-sky-950">
+					<h3 class="text-xs font-bold uppercase tracking-wider text-sky-800 mb-2">🧪 Chemical Controls</h3>
+					<ul id="res-chemical" class="space-y-1.5 text-xs text-sky-900 list-disc list-inside"></ul>
 				</div>
 			</div>
 
 			<!-- Prevention -->
-			<div class="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
-				<h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">🛡️ Prevention</h3>
-				<ul id="res-prevention" class="space-y-1.5 text-xs text-slate-300 list-disc list-inside"></ul>
+			<div class="p-5 rounded-2xl bg-neutral-50 border border-neutral-200/80 text-neutral-800">
+				<h3 class="text-xs font-bold uppercase tracking-wider text-neutral-600 mb-2">🛡️ Prevention</h3>
+				<ul id="res-prevention" class="space-y-1.5 text-xs text-neutral-700 list-disc list-inside"></ul>
 			</div>
 		</section>
 
 		<!-- Camera Modal -->
-		<div id="camera-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-			<div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-4 space-y-3">
+		<div id="camera-modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+			<div class="bg-white border border-neutral-200 rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-3">
 				<div class="flex items-center justify-between">
-					<span class="text-xs font-bold text-white">Capture Plant Photo</span>
-					<button id="btn-close-camera" type="button" class="text-slate-400 hover:text-white">&times;</button>
+					<span class="text-xs font-bold text-neutral-900">Capture Plant Photo</span>
+					<button id="btn-close-camera" type="button" class="text-neutral-400 hover:text-neutral-700 text-lg leading-none">&times;</button>
 				</div>
-				<div class="relative rounded-xl overflow-hidden bg-black aspect-square">
+				<div class="relative rounded-2xl overflow-hidden bg-neutral-950 aspect-square">
 					<video id="camera-video" autoplay playsinline class="w-full h-full object-cover"></video>
 				</div>
 				<div class="flex gap-2">
-					<button id="btn-snap" type="button" class="flex-1 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs">
+					<button id="btn-snap" type="button" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
 						Snap Photo
 					</button>
-					<button id="btn-cancel-camera" type="button" class="py-2 px-3 rounded-xl border border-slate-800 text-slate-300 text-xs">
+					<button id="btn-cancel-camera" type="button" class="py-2.5 px-3 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 text-xs font-medium transition">
 						Cancel
 					</button>
 				</div>
@@ -289,13 +292,18 @@ import Layout from '../layouts/Layout.astro';
 			const isHealthy = data.status === 'healthy';
 			resStatus.textContent = isHealthy ? 'HEALTHY' : 'DISEASED';
 			resStatus.className = isHealthy 
-				? 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-				: 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30';
+				? 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300'
+				: 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300';
 
-			resPathogen.textContent = (data.pathogen_type || 'pathogen').toUpperCase();
+			if (data.pathogen_type) {
+				resPathogen.textContent = data.pathogen_type.toUpperCase();
+				resPathogen.classList.remove('hidden');
+			} else {
+				resPathogen.classList.add('hidden');
+			}
 			resConfidence.textContent = `Confidence: ${(data.confidence || 'medium').toUpperCase()}`;
 			resDisease.textContent = data.disease_name || 'Diagnosis';
-			resCrop.innerHTML = `Crop: <span class="text-slate-200 font-semibold">${data.crop || 'Plant'}</span>`;
+			resCrop.innerHTML = `Crop: <span class="text-neutral-900 font-semibold">${data.crop || 'Plant'}</span>`;
 
 			resSymptoms.innerHTML = (data.key_symptoms || []).map(s => `<li>${s}</li>`).join('');
 			resOrganic.innerHTML = (data.organic_treatment || []).map(t => `<li>${t}</li>`).join('');
@@ -339,20 +347,20 @@ import Layout from '../layouts/Layout.astro';
 			dropzone.addEventListener(type, (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				dropzone.classList.add('border-emerald-500', 'bg-emerald-950/20');
+				dropzone.classList.add('border-emerald-500', 'bg-emerald-50/40');
 			});
 		});
 
 		dropzone.addEventListener('dragleave', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			dropzone.classList.remove('border-emerald-500', 'bg-emerald-950/20');
+			dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/40');
 		});
 
 		dropzone.addEventListener('drop', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			dropzone.classList.remove('border-emerald-500', 'bg-emerald-950/20');
+			dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/40');
 			const file = e.dataTransfer?.files?.[0];
 			if (file && file.type.startsWith('image/')) {
 				const reader = new FileReader();

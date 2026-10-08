@@ -47,7 +47,7 @@ if (!isPthread) {
       },
       crop: {
         type: 'string',
-        description: 'Identified crop or plant species, e.g. Tomato, Potato, Corn, Apple, Grape, Rice. Try to identify in reasoning time already yell name '
+        description: 'Identified crop or plant species. Try to identify in reasoning time already yell name '
       },
       status: {
         type: 'string',
@@ -56,16 +56,11 @@ if (!isPthread) {
       },
       disease_name: {
         type: 'string',
-        description: 'Specific common or scientific name of disease identified (e.g. Late Blight, Powdery Mildew, Leaf Spot) or "Healthy Leaf" if none'
-      },
-      pathogen_type: {
-        type: 'string',
-        description: 'Biological category of causal agent: fungal, bacterial, viral, pest, environmental, or none if healthy',
-        enum: ['fungal', 'bacterial', 'viral', 'pest', 'environmental', 'none']
+        description: 'Specific common or scientific name of disease identified. Identify it during reasoning time try to be more accurate based on the conditions. or "Healthy Leaf" if none'
       },
       confidence: {
         type: 'string',
-        description: 'Confidence level based on visual clarity and distinctness of symptoms: high, medium, or low',
+        description: 'Confidence level based on visual clarity and distinctness of symptoms: high, medium, or low. DOnt be lways highly fake confident. SHow real confidence.',
         enum: ['high', 'medium', 'low']
       },
       key_symptoms: {
@@ -78,7 +73,7 @@ if (!isPthread) {
       },
       organic_treatment: {
         type: 'array',
-        description: 'List of actionable eco-friendly or organic control treatments (e.g. neem oil spray, copper soap, bio-fungicides, removing infected foliage)',
+        description: 'List of actionable eco-friendly or organic control treatments. Think while reasoning',
         items: {
           type: 'string',
           description: 'Organic treatment measure'
@@ -86,7 +81,7 @@ if (!isPthread) {
       },
       chemical_treatment: {
         type: 'array',
-        description: 'List of standard synthetic chemicals or fungicides with active ingredients (e.g. Mancozeb 75% WP, Chlorothalonil)',
+        description: 'List of standard synthetic chemicals or fungicides with active ingredients. Think while reasoning',
         items: {
           type: 'string',
           description: 'Chemical treatment measure'
@@ -94,7 +89,7 @@ if (!isPthread) {
       },
       prevention_measures: {
         type: 'array',
-        description: 'List of cultural practices to prevent spread and recurrence (e.g. drip irrigation, crop rotation, resistant cultivars, adequate spacing)',
+        description: 'List of cultural practices to prevent spread and recurrence. Think while reasoning',
         items: {
           type: 'string',
           description: 'Preventative cultural measure'
@@ -106,7 +101,6 @@ if (!isPthread) {
       'crop',
       'status',
       'disease_name',
-      'pathogen_type',
       'confidence',
       'key_symptoms',
       'organic_treatment',
