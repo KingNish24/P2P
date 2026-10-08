@@ -246,9 +246,11 @@ if (!isPthread) {
 
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
-Examine this crops carefully. Always reason first.
+Examine this crops carefully. Reason first good length.
 ${userNote ? `Farmer Note: "${userNote}"` : ''}
-Respond strictly in JSON matching the schema with reasoning as the first property.`;
+Respond strictly in JSON matching this schema:
+${JSON.stringify(DIAGNOSIS_SCHEMA, null, 2)}
+Reasoning must be the first property.`;
 
         const messages = [
           {
