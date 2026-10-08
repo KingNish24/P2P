@@ -1,6 +1,6 @@
 import {
   AutoProcessor,
-  Qwen3_5ForConditionalGeneration,
+  AutoModelForImageTextToText,
   RawImage,
   TextStreamer,
   env
@@ -15,7 +15,7 @@ if (!isPthread) {
   env.backends.onnx.wasm.numThreads = 1;
   env.backends.onnx.wasm.proxy = false;
 
-  const MODEL_ID = 'onnx-community/Qwen3.5-0.8B-ONNX-OPT';
+  const MODEL_ID = 'onnx-community/LFM2.5-VL-450M-ONNX';
   const DTYPE = 'q4f16';
 
   let processor = null;
@@ -143,12 +143,8 @@ if (!isPthread) {
         progress_callback: progressCallback
       });
 
-      model = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, {
-        dtype: {
-          embed_tokens: 'q4f16',
-          vision_encoder: 'q4f16',
-          decoder_model_merged: 'q4f16'
-        },
+      model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
+        dtype: DTYPE,
         device: 'webgpu',
         progress_callback: progressCallback
       });
@@ -236,7 +232,7 @@ if (!isPthread) {
 
         // 1. Process image
         const imageBlob = dataUrlToBlob(image);
-        const rawImage = await (await RawImage.fromBlob(imageBlob)).resize(448, 448);
+        const rawImage = await RawImage.fromBlob(imageBlob);
 
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
@@ -258,8 +254,8 @@ Reasoning must be the first property.`;
 
         const promptText = processor.apply_chat_template(messages, { add_generation_prompt: true });
 
-        // 3. Prepare inputs with correct argument order (text, images)
-        const inputs = await processor(promptText, rawImage);
+        // 3. Prepare inputs with correct argument order
+        const inputs = await processor(rawImage, promptText, { add_special_tokens: false });
 
         let rawTokens = '';
         const streamer = new TextStreamer(processor.tokenizer, {
@@ -279,6 +275,7 @@ Reasoning must be the first property.`;
           ...inputs,
           max_new_tokens: 4096,
           do_sample: true,
+          temperature: 0.7,
           streamer: streamer,
           logits_processor: [structuredProcessor]
         });
