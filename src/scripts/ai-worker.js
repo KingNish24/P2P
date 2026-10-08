@@ -1,6 +1,6 @@
 import {
   AutoProcessor,
-  AutoModelForImageTextToText,
+  Qwen3_5ForConditionalGeneration,
   RawImage,
   TextStreamer,
   env
@@ -143,10 +143,10 @@ if (!isPthread) {
         progress_callback: progressCallback
       });
 
-      model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
+      model = await Qwen3_5ForConditionalGeneration.from_pretrained(MODEL_ID, {
         dtype: {
-          vision_encoder: 'q4f16',
           embed_tokens: 'q4f16',
+          vision_encoder: 'q4f16',
           decoder_model_merged: 'q4f16'
         },
         device: 'webgpu',
@@ -236,7 +236,7 @@ if (!isPthread) {
 
         // 1. Process image
         const imageBlob = dataUrlToBlob(image);
-        const rawImage = await RawImage.fromBlob(imageBlob);
+        const rawImage = await (await RawImage.fromBlob(imageBlob)).resize(448, 448);
 
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
@@ -256,15 +256,10 @@ Reasoning must be the first property.`;
           }
         ];
 
-        const promptText = processor.apply_chat_template(messages, {
-          tokenize: false,
-          add_generation_prompt: true
-        });
+        const promptText = processor.apply_chat_template(messages, { add_generation_prompt: true });
 
-        // 3. Prepare inputs with correct argument order (images, text)
-        const inputs = await processor(rawImage, promptText, {
-          add_special_tokens: false
-        });
+        // 3. Prepare inputs with correct argument order (text, images)
+        const inputs = await processor(promptText, rawImage);
 
         let rawTokens = '';
         const streamer = new TextStreamer(processor.tokenizer, {
@@ -291,7 +286,7 @@ Reasoning must be the first property.`;
         // Slicing and JSON Parsing: prefer rawTokens from streamer (skip_prompt: true)
         const promptLen = inputs.input_ids?.dims?.at(-1) || 0;
         const genTokens = promptLen > 0 ? output.slice(null, [promptLen, null]) : output;
-        const decoded = processor.tokenizer.batch_decode(genTokens, { skip_special_tokens: true });
+        const decoded = processor.batch_decode(genTokens, { skip_special_tokens: true });
         const decodedText = (decoded[0] || '').trim();
         const fullText = rawTokens.trim() || decodedText;
 

@@ -2,11 +2,11 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="PhytoAI | Safe Diagnosis for Your Crops & Edge AI">
+<Layout title="Disease Dekho AI | Safe Diagnosis for Your Crops & Edge AI">
 	<!-- Sticky Header Navbar -->
 	<header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-neutral-100 transition-colors">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-			<!-- Logo: Seedling SVG with #00c853 fill + PhytoAI in bold text-[#1a1a1a] -->
+			<!-- Logo: Seedling SVG with #00c853 fill + Disease Dekho AI in bold text-[#1a1a1a] -->
 			<a href="#" class="flex items-center gap-2.5 group">
 				<div class="w-8 h-8 rounded-xl flex items-center justify-center transition group-hover:scale-105">
 					<svg class="w-6 h-6 fill-[#00c853]" viewBox="0 0 24 24">
@@ -14,7 +14,7 @@ import Layout from '../layouts/Layout.astro';
 						<path d="M12 13a4 4 0 0 0-4-4H7a6 6 0 0 0-6 6h2a4 4 0 0 1 4-4h1a2 2 0 0 1 2 2v1h2v-1z" opacity=".6"/>
 					</svg>
 				</div>
-				<span class="font-bold text-lg tracking-tight text-[#1a1a1a]">PhytoAI</span>
+				<span class="font-bold text-lg tracking-tight text-[#1a1a1a]">Disease Dekho AI</span>
 			</a>
 
 			<!-- Center Nav Links -->
@@ -73,72 +73,52 @@ import Layout from '../layouts/Layout.astro';
 		<section class="py-8 px-4 overflow-hidden max-w-5xl mx-auto">
 			<div class="relative flex items-center justify-center gap-2 sm:gap-4 pt-4 pb-12 select-none">
 				<!-- Card 1: Tomato -->
-				<div class="transform -rotate-6 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-amber-50 to-orange-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64">
-					<div class="flex justify-between items-start">
-						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-orange-800 shadow-2xs">Tomato</span>
-						<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+				<button type="button" data-sample="/samples/tomato.jpg" class="sample-btn group cursor-pointer text-left transform -rotate-6 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64">
+					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
+						<img src="/samples/tomato.jpg" alt="Tomato" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
+						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-rose-800 shadow-xs">Tomato</span>
 					</div>
-					<div class="w-full flex-1 flex items-center justify-center py-2">
-						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-orange-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9S3 7.03 3 12a9 9 0 0 0 9 9zm0 0v-8m0 0a4 4 0 0 1 4-4m-4 4a4 4 0 0 0-4-4" />
-						</svg>
-					</div>
-					<div>
+					<div class="pt-2">
 						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Early Blight</p>
-						<p class="text-[9px] sm:text-[10px] text-neutral-500 font-mono">98% confidence</p>
+						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
 					</div>
-				</div>
+				</button>
 
 				<!-- Card 2: Corn -->
-				<div class="transform -rotate-2 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-emerald-50 to-teal-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64 z-10">
-					<div class="flex justify-between items-start">
-						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-emerald-800 shadow-2xs">Corn</span>
-						<span class="w-2 h-2 rounded-full bg-[#00c853]"></span>
+				<button type="button" data-sample="/samples/corn.jpg" class="sample-btn group cursor-pointer text-left transform -rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64 z-10">
+					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
+						<img src="/samples/corn.jpg" alt="Corn" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
+						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-emerald-800 shadow-xs">Corn</span>
 					</div>
-					<div class="w-full flex-1 flex items-center justify-center py-2">
-						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-emerald-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-						</svg>
+					<div class="pt-2">
+						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Common Rust</p>
+						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
 					</div>
-					<div>
-						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Healthy Foliage</p>
-						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-mono">Optimal vigor</p>
-					</div>
-				</div>
+				</button>
 
 				<!-- Card 3: Grape -->
-				<div class="transform rotate-2 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-purple-50 to-indigo-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64 z-10">
-					<div class="flex justify-between items-start">
-						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-purple-800 shadow-2xs">Grape</span>
-						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+				<button type="button" data-sample="/samples/grape.jpg" class="sample-btn group cursor-pointer text-left transform rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64 z-10">
+					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
+						<img src="/samples/grape.jpg" alt="Grape" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
+						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-purple-800 shadow-xs">Grape</span>
 					</div>
-					<div class="w-full flex-1 flex items-center justify-center py-2">
-						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-purple-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-						</svg>
-					</div>
-					<div>
+					<div class="pt-2">
 						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Black Rot</p>
-						<p class="text-[9px] sm:text-[10px] text-neutral-500 font-mono">Guignardia bidwellii</p>
+						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
 					</div>
-				</div>
+				</button>
 
 				<!-- Card 4: Potato -->
-				<div class="transform rotate-6 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-lime-50 to-green-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64">
-					<div class="flex justify-between items-start">
-						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-lime-900 shadow-2xs">Potato</span>
-						<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+				<button type="button" data-sample="/samples/potato.jpg" class="sample-btn group cursor-pointer text-left transform rotate-6 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64">
+					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
+						<img src="/samples/potato.jpg" alt="Potato" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
+						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-lime-900 shadow-xs">Potato</span>
 					</div>
-					<div class="w-full flex-1 flex items-center justify-center py-2">
-						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-lime-600/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-						</svg>
-					</div>
-					<div>
+					<div class="pt-2">
 						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Late Blight</p>
-						<p class="text-[9px] sm:text-[10px] text-neutral-500 font-mono">Phytophthora infestans</p>
+						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
 					</div>
-				</div>
+				</button>
 			</div>
 		</section>
 
@@ -343,7 +323,7 @@ import Layout from '../layouts/Layout.astro';
 		<!-- Comparison Matrix -->
 		<section id="architecture" class="scroll-mt-24 py-16 border-t border-neutral-100 max-w-6xl mx-auto px-4 sm:px-6 mb-16">
 			<div class="text-center max-w-xl mx-auto mb-12 space-y-2">
-				<h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1a1a1a]">Cloud AI vs PhytoAI Edge</h2>
+				<h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1a1a1a]">Cloud AI vs Disease Dekho AI Edge</h2>
 				<p class="text-sm text-neutral-400">Why local execution is the optimal architectural pattern for agricultural diagnostics.</p>
 			</div>
 
@@ -354,7 +334,7 @@ import Layout from '../layouts/Layout.astro';
 							<tr class="border-b border-neutral-200 bg-neutral-50/70 text-neutral-600 font-mono">
 								<th class="py-4 px-6 font-semibold">Architectural Vector</th>
 								<th class="py-4 px-6 font-semibold text-neutral-400">Traditional Cloud AI</th>
-								<th class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">PhytoAI On-Device</th>
+								<th class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">Disease Dekho AI On-Device</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-neutral-100 text-neutral-700">
@@ -399,7 +379,7 @@ import Layout from '../layouts/Layout.astro';
 						<path d="M21 3c-6.627 0-12 5.373-12 12v1H7a5 5 0 0 0-5 5h2a3 3 0 0 1 3-3h4a2 2 0 0 0 2-2v-3c0-4.418 3.582-8 8-8V3z"/>
 					</svg>
 				</div>
-				<span class="font-bold text-[#1a1a1a]">PhytoAI</span>
+				<span class="font-bold text-[#1a1a1a]">Disease Dekho AI</span>
 				<span>&middot; Edge AI Crop Health &amp; Agronomic Diagnostics</span>
 			</div>
 			<p class="text-center sm:text-right">
@@ -713,6 +693,26 @@ import Layout from '../layouts/Layout.astro';
 			ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
 			setImage(canvas.toDataURL('image/jpeg', 0.85));
 			stopCamera();
+		});
+
+		// Sample Fan Button Clicks
+		document.querySelectorAll('.sample-btn').forEach((btn) => {
+			btn.addEventListener('click', async () => {
+				const sampleUrl = btn.getAttribute('data-sample');
+				if (!sampleUrl) return;
+				try {
+					const res = await fetch(sampleUrl);
+					const blob = await res.blob();
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						setImage(e.target.result);
+						document.getElementById('app')?.scrollIntoView({ behavior: 'smooth' });
+					};
+					reader.readAsDataURL(blob);
+				} catch (err) {
+					console.error('Failed to load sample image:', err);
+				}
+			});
 		});
 
 		checkWebGPU();
