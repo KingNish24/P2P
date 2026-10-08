@@ -275,7 +275,7 @@ Reasoning must be the first property.`;
           ...inputs,
           max_new_tokens: 4096,
           do_sample: true,
-          temperature: 0.7,
+          temperature: 0.3,
           streamer: streamer,
           logits_processor: [structuredProcessor]
         });

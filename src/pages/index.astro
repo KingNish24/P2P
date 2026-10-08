@@ -71,52 +71,48 @@ import Layout from '../layouts/Layout.astro';
 
 		<!-- Photo Fan / Gallery Shelf (matching Ente photo fan) -->
 		<section class="py-8 px-4 overflow-hidden max-w-5xl mx-auto">
-			<div class="relative flex items-center justify-center gap-2 sm:gap-4 pt-4 pb-12 select-none">
+			<div class="relative flex items-center justify-center -space-x-3 sm:-space-x-6 md:-space-x-8 pt-6 pb-12 select-none">
 				<!-- Card 1: Tomato -->
-				<button type="button" data-sample="/samples/tomato.jpg" class="sample-btn group cursor-pointer text-left transform -rotate-6 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64">
-					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
-						<img src="/samples/tomato.jpg" alt="Tomato" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
-						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-rose-800 shadow-xs">Tomato</span>
-					</div>
-					<div class="pt-2">
-						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Early Blight</p>
-						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
+				<button type="button" data-sample="/samples/tomato.jpg" class="sample-btn group cursor-pointer text-left relative aspect-[4/5] w-36 sm:w-52 md:w-56 rounded-3xl sm:rounded-[30px] border-[5px] sm:border-[6px] border-white ring-1 ring-black/5 shadow-xl bg-white overflow-hidden -rotate-8 translate-y-3 sm:translate-y-5 z-10 hover:rotate-0 hover:-translate-y-4 hover:scale-105 hover:z-40 hover:shadow-2xl transition-all duration-300 ease-out">
+					<img src="/samples/tomato.jpg" alt="Tomato" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+					<div class="absolute bottom-2.5 sm:bottom-3 inset-x-2.5 sm:inset-x-3 pointer-events-none">
+						<div class="bg-black/40 backdrop-blur-md border border-white/20 rounded-full px-2.5 py-1 flex items-center justify-between text-white shadow-xs">
+							<span class="text-[10px] sm:text-xs font-semibold">Tomato</span>
+							<span class="text-[9px] sm:text-[10px] text-emerald-300">Early Blight</span>
+						</div>
 					</div>
 				</button>
 
 				<!-- Card 2: Corn -->
-				<button type="button" data-sample="/samples/corn.jpg" class="sample-btn group cursor-pointer text-left transform -rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64 z-10">
-					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
-						<img src="/samples/corn.jpg" alt="Corn" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
-						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-emerald-800 shadow-xs">Corn</span>
-					</div>
-					<div class="pt-2">
-						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Common Rust</p>
-						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
+				<button type="button" data-sample="/samples/corn.jpg" class="sample-btn group cursor-pointer text-left relative aspect-[4/5] w-36 sm:w-52 md:w-56 rounded-3xl sm:rounded-[30px] border-[5px] sm:border-[6px] border-white ring-1 ring-black/5 shadow-xl bg-white overflow-hidden -rotate-2 translate-y-0 sm:translate-y-1 z-20 hover:rotate-0 hover:-translate-y-4 hover:scale-105 hover:z-40 hover:shadow-2xl transition-all duration-300 ease-out">
+					<img src="/samples/corn.jpg" alt="Corn" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+					<div class="absolute bottom-2.5 sm:bottom-3 inset-x-2.5 sm:inset-x-3 pointer-events-none">
+						<div class="bg-black/40 backdrop-blur-md border border-white/20 rounded-full px-2.5 py-1 flex items-center justify-between text-white shadow-xs">
+							<span class="text-[10px] sm:text-xs font-semibold">Corn</span>
+							<span class="text-[9px] sm:text-[10px] text-emerald-300">Common Rust</span>
+						</div>
 					</div>
 				</button>
 
 				<!-- Card 3: Grape -->
-				<button type="button" data-sample="/samples/grape.jpg" class="sample-btn group cursor-pointer text-left transform rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64 z-10">
-					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
-						<img src="/samples/grape.jpg" alt="Grape" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
-						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-purple-800 shadow-xs">Grape</span>
-					</div>
-					<div class="pt-2">
-						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Black Rot</p>
-						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
+				<button type="button" data-sample="/samples/grape.jpg" class="sample-btn group cursor-pointer text-left relative aspect-[4/5] w-36 sm:w-52 md:w-56 rounded-3xl sm:rounded-[30px] border-[5px] sm:border-[6px] border-white ring-1 ring-black/5 shadow-xl bg-white overflow-hidden rotate-2 -translate-y-2 sm:-translate-y-3 z-30 hover:rotate-0 hover:-translate-y-6 hover:scale-105 hover:z-40 hover:shadow-2xl transition-all duration-300 ease-out">
+					<img src="/samples/grape.jpg" alt="Grape" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+					<div class="absolute bottom-2.5 sm:bottom-3 inset-x-2.5 sm:inset-x-3 pointer-events-none">
+						<div class="bg-black/40 backdrop-blur-md border border-white/20 rounded-full px-2.5 py-1 flex items-center justify-between text-white shadow-xs">
+							<span class="text-[10px] sm:text-xs font-semibold">Grape</span>
+							<span class="text-[9px] sm:text-[10px] text-emerald-300">Black Rot</span>
+						</div>
 					</div>
 				</button>
 
 				<!-- Card 4: Potato -->
-				<button type="button" data-sample="/samples/potato.jpg" class="sample-btn group cursor-pointer text-left transform rotate-6 hover:rotate-0 hover:scale-105 transition-all duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-white p-2.5 overflow-hidden flex flex-col justify-between h-48 sm:h-64">
-					<div class="relative w-full h-28 sm:h-40 rounded-2xl overflow-hidden bg-neutral-100">
-						<img src="/samples/potato.jpg" alt="Potato" class="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition duration-300" />
-						<span class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/95 backdrop-blur-xs text-[10px] sm:text-xs font-semibold text-lime-900 shadow-xs">Potato</span>
-					</div>
-					<div class="pt-2">
-						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Late Blight</p>
-						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-medium">Click to diagnose &rarr;</p>
+				<button type="button" data-sample="/samples/potato.jpg" class="sample-btn group cursor-pointer text-left relative aspect-[4/5] w-36 sm:w-52 md:w-56 rounded-3xl sm:rounded-[30px] border-[5px] sm:border-[6px] border-white ring-1 ring-black/5 shadow-xl bg-white overflow-hidden rotate-8 translate-y-3 sm:translate-y-5 z-10 hover:rotate-0 hover:-translate-y-4 hover:scale-105 hover:z-40 hover:shadow-2xl transition-all duration-300 ease-out">
+					<img src="/samples/potato.jpg" alt="Potato" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+					<div class="absolute bottom-2.5 sm:bottom-3 inset-x-2.5 sm:inset-x-3 pointer-events-none">
+						<div class="bg-black/40 backdrop-blur-md border border-white/20 rounded-full px-2.5 py-1 flex items-center justify-between text-white shadow-xs">
+							<span class="text-[10px] sm:text-xs font-semibold">Potato</span>
+							<span class="text-[9px] sm:text-[10px] text-emerald-300">Late Blight</span>
+						</div>
 					</div>
 				</button>
 			</div>
