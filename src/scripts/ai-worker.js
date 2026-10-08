@@ -118,7 +118,7 @@ if (!isPthread) {
     self.postMessage({
       type: 'status',
       status: 'loading',
-      message: 'Loading LFM2.5-VL-450M (q4f16 WebGPU)...'
+      message: 'Loading Gemini Google Gemma4 E2B (q4f16 WebGPU)...'
     });
 
     const MODEL_FILE_COUNT = 3;
@@ -156,12 +156,12 @@ if (!isPthread) {
       self.postMessage({
         type: 'status',
         status: 'ready',
-        message: 'LFM2.5-VL-450M WebGPU loaded and ready!'
+        message: 'Gemini Google Gemma4 E2B WebGPU loaded and ready!'
       });
 
       return { processor, model };
     } catch (err) {
-      console.error('Failed to load LFM2.5-VL model:', err);
+      console.error('Failed to load Gemini Google Gemma4 E2B model:', err);
       self.postMessage({
         type: 'error',
         message: `${err.name || 'Error'}: ${err.message || 'Error initializing WebGPU model.'}`
@@ -226,7 +226,7 @@ if (!isPthread) {
         self.postMessage({
           type: 'status',
           status: 'analyzing',
-          message: 'LFM2.5-VL reasoning over crop symptoms...'
+          message: 'Gemini Google Gemma4 E2B reasoning over crop symptoms...'
         });
 
         const structuredProcessor = new StructuredOutputProcessor(processor.tokenizer, {
