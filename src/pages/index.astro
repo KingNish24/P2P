@@ -2,36 +2,39 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="PhytoAI | On-Device Crop Disease Diagnosis & Edge AI">
+<Layout title="PhytoAI | Safe Diagnosis for Your Crops & Edge AI">
 	<!-- Sticky Header Navbar -->
-	<header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-neutral-200/80 transition-colors">
+	<header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-neutral-100 transition-colors">
 		<div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-			<a href="#" class="flex items-center gap-2.5 text-neutral-900 group">
-				<div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 transition group-hover:bg-emerald-500 group-hover:text-white">
-					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9S3 7.03 3 12a9 9 0 0 0 9 9zm0 0v-8m0 0a4 4 0 0 1 4-4m-4 4a4 4 0 0 0-4-4" />
+			<!-- Logo: Seedling SVG with #00c853 fill + PhytoAI in bold text-[#1a1a1a] -->
+			<a href="#" class="flex items-center gap-2.5 group">
+				<div class="w-8 h-8 rounded-xl flex items-center justify-center transition group-hover:scale-105">
+					<svg class="w-6 h-6 fill-[#00c853]" viewBox="0 0 24 24">
+						<path d="M21 3c-6.627 0-12 5.373-12 12v1H7a5 5 0 0 0-5 5h2a3 3 0 0 1 3-3h4a2 2 0 0 0 2-2v-3c0-4.418 3.582-8 8-8V3z"/>
+						<path d="M12 13a4 4 0 0 0-4-4H7a6 6 0 0 0-6 6h2a4 4 0 0 1 4-4h1a2 2 0 0 1 2 2v1h2v-1z" opacity=".6"/>
 					</svg>
 				</div>
-				<span class="font-bold text-base tracking-tight text-neutral-900">PhytoAI</span>
-				<span class="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-100/70 text-emerald-800 border border-emerald-200 font-semibold">Edge</span>
+				<span class="font-bold text-lg tracking-tight text-[#1a1a1a]">PhytoAI</span>
 			</a>
 
-			<nav class="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-600">
-				<a href="#app" class="hover:text-neutral-900 transition">Diagnose</a>
-				<a href="#features" class="hover:text-neutral-900 transition">Features</a>
-				<a href="#architecture" class="hover:text-neutral-900 transition">Architecture</a>
+			<!-- Center Nav Links -->
+			<nav class="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-500">
+				<a href="#features" class="hover:text-[#1a1a1a] transition">Features</a>
+				<a href="#architecture" class="hover:text-[#1a1a1a] transition">Architecture</a>
+				<a href="#app" class="hover:text-[#1a1a1a] transition">Diagnose</a>
 			</nav>
 
+			<!-- Right: WebGPU live badge & GitHub SVG link -->
 			<div class="flex items-center gap-3">
-				<!-- WebGPU Status Badge -->
-				<div id="webgpu-badge" class="flex items-center gap-1.5 text-[11px] font-mono text-neutral-700 bg-neutral-100/80 border border-neutral-200/90 px-2.5 py-1 rounded-full shadow-2xs">
-					<span id="webgpu-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+				<!-- WebGPU live chip badge -->
+				<div id="webgpu-badge" class="flex items-center gap-1.5 text-xs font-mono text-neutral-600 bg-neutral-100 px-3 py-1 rounded-full">
+					<span id="webgpu-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
 					<span id="webgpu-status">WebGPU</span>
 				</div>
 
-				<!-- GitHub Repo Link -->
-				<a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" class="p-2 rounded-xl text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 border border-transparent hover:border-neutral-200 transition">
-					<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+				<!-- GitHub SVG link -->
+				<a href="https://github.com/KingNish24/P2P" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository" class="p-2 rounded-full text-neutral-600 hover:text-[#1a1a1a] hover:bg-neutral-100 transition">
+					<svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
 						<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
 					</svg>
 				</a>
@@ -39,135 +42,175 @@ import Layout from '../layouts/Layout.astro';
 		</div>
 	</header>
 
-	<main class="max-w-6xl mx-auto px-4 sm:px-6">
+	<main class="bg-white">
 		<!-- Hero Section -->
-		<section class="pt-16 pb-14 text-center max-w-3xl mx-auto space-y-6">
-			<!-- Privacy Announcement Badge -->
-			<div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/90 text-xs font-medium shadow-2xs">
-				<svg class="w-3.5 h-3.5 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-					<path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0 1 10 0v4" />
-				</svg>
-				<span>100% On-Device &amp; Private &middot; Zero Images Sent to Servers</span>
-			</div>
+		<section class="pt-20 pb-12 px-4 sm:px-6 text-center">
+			<div class="max-w-4xl mx-auto">
+				<!-- Giant bold headline matching Ente screenshot -->
+				<h1 class="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] mb-4 text-center">
+					<span class="block text-[#00c853]">Safe diagnosis</span>
+					<span class="block text-[#1a1a1a]">for your crops</span>
+				</h1>
 
-			<h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-neutral-900 leading-[1.12]">
-				Private crop diagnosis,<br class="hidden sm:inline" /> powered by edge AI.
-			</h1>
+				<!-- Subhead matching screenshot -->
+				<p class="text-neutral-400 text-base sm:text-lg text-center max-w-xl mx-auto mb-8 font-normal">
+					End-to-end private. WebGPU accelerated. Open-source.
+				</p>
 
-			<p class="text-base sm:text-lg text-neutral-600 leading-relaxed font-normal max-w-2xl mx-auto">
-				Instant plant disease detection and treatment protocols directly in your browser. No cloud uploads, no API keys, zero tracking.
-			</p>
-
-			<!-- Action Buttons -->
-			<div class="flex flex-wrap items-center justify-center gap-3 pt-2">
-				<a href="#app" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-xs tracking-wider uppercase shadow-md hover:shadow-lg transition cursor-pointer">
-					<span>Diagnose Plant</span>
-					<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-					</svg>
-				</a>
-				<a href="https://github.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-200/90 font-medium text-xs tracking-wider uppercase shadow-xs transition">
-					<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-						<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-					</svg>
-					<span>GitHub</span>
-				</a>
-			</div>
-
-			<!-- Trust Highlights Bar -->
-			<div class="pt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-neutral-500 text-xs">
-				<div class="flex items-center gap-1.5">
-					<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-2.829-2.829m0 0L3 21m2.829-5.657A5 5 0 013 12c0-1.38.56-2.63 1.464-3.536M3 3l18 18" />
-					</svg>
-					<span class="font-medium text-neutral-700">Zero Cloud Uploads</span>
-				</div>
-				<div class="flex items-center gap-1.5">
-					<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<rect x="4" y="4" width="16" height="16" rx="2" />
-						<rect x="9" y="9" width="6" height="6" />
-						<path stroke-linecap="round" stroke-linejoin="round" d="M9 1v3m6-3v3M9 20v3m6-3v3M20 9h3m-3 6h3M1 9h3m-3 6h3" />
-					</svg>
-					<span class="font-medium text-neutral-700">Client-side WebGPU</span>
-				</div>
-				<div class="flex items-center gap-1.5">
-					<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-					</svg>
-					<span class="font-medium text-neutral-700">Open Source</span>
+				<!-- Dual Pill Buttons matching screenshot -->
+				<div class="flex flex-wrap items-center justify-center gap-3.5 pt-1">
+					<a href="#app" class="px-8 py-3.5 rounded-full bg-[#2d2d2d] hover:bg-[#1a1a1a] text-white font-medium text-sm transition shadow-sm inline-flex items-center gap-2">
+						Diagnose Plant
+					</a>
+					<a href="https://github.com/KingNish24/P2P" target="_blank" rel="noopener noreferrer" class="px-8 py-3.5 rounded-full bg-[#f3f4f6] hover:bg-[#e5e7eb] text-[#1f2937] font-medium text-sm transition inline-flex items-center gap-2">
+						GitHub
+					</a>
 				</div>
 			</div>
 		</section>
 
-		<!-- Core Diagnostic App Container -->
-		<section id="app" class="scroll-mt-24 max-w-3xl mx-auto mb-20">
-			<!-- Ente-style White Card -->
-			<div class="bg-white border border-neutral-200/90 rounded-3xl p-6 sm:p-8 shadow-sm transition hover:shadow-md space-y-6">
+		<!-- Photo Fan / Gallery Shelf (matching Ente photo fan) -->
+		<section class="py-8 px-4 overflow-hidden max-w-5xl mx-auto">
+			<div class="relative flex items-center justify-center gap-2 sm:gap-4 pt-4 pb-12 select-none">
+				<!-- Card 1: Tomato -->
+				<div class="transform -rotate-6 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-amber-50 to-orange-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64">
+					<div class="flex justify-between items-start">
+						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-orange-800 shadow-2xs">Tomato</span>
+						<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+					</div>
+					<div class="w-full flex-1 flex items-center justify-center py-2">
+						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-orange-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9S3 7.03 3 12a9 9 0 0 0 9 9zm0 0v-8m0 0a4 4 0 0 1 4-4m-4 4a4 4 0 0 0-4-4" />
+						</svg>
+					</div>
+					<div>
+						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Early Blight</p>
+						<p class="text-[9px] sm:text-[10px] text-neutral-500 font-mono">98% confidence</p>
+					</div>
+				</div>
+
+				<!-- Card 2: Corn -->
+				<div class="transform -rotate-2 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-emerald-50 to-teal-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64 z-10">
+					<div class="flex justify-between items-start">
+						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-emerald-800 shadow-2xs">Corn</span>
+						<span class="w-2 h-2 rounded-full bg-[#00c853]"></span>
+					</div>
+					<div class="w-full flex-1 flex items-center justify-center py-2">
+						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-emerald-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+						</svg>
+					</div>
+					<div>
+						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Healthy Foliage</p>
+						<p class="text-[9px] sm:text-[10px] text-[#00a846] font-mono">Optimal vigor</p>
+					</div>
+				</div>
+
+				<!-- Card 3: Grape -->
+				<div class="transform rotate-2 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-purple-50 to-indigo-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64 z-10">
+					<div class="flex justify-between items-start">
+						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-purple-800 shadow-2xs">Grape</span>
+						<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+					</div>
+					<div class="w-full flex-1 flex items-center justify-center py-2">
+						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-purple-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+						</svg>
+					</div>
+					<div>
+						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Black Rot</p>
+						<p class="text-[9px] sm:text-[10px] text-neutral-500 font-mono">Guignardia bidwellii</p>
+					</div>
+				</div>
+
+				<!-- Card 4: Potato -->
+				<div class="transform rotate-6 hover:rotate-0 transition-transform duration-300 w-36 sm:w-48 rounded-3xl border-4 border-white shadow-xl bg-gradient-to-b from-lime-50 to-green-100 p-3 sm:p-4 text-left flex flex-col justify-between h-48 sm:h-64">
+					<div class="flex justify-between items-start">
+						<span class="px-2 py-0.5 rounded-full bg-white/90 text-[10px] sm:text-xs font-semibold text-lime-900 shadow-2xs">Potato</span>
+						<span class="w-2 h-2 rounded-full bg-rose-500"></span>
+					</div>
+					<div class="w-full flex-1 flex items-center justify-center py-2">
+						<svg class="w-16 h-16 sm:w-20 sm:h-20 text-lime-600/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+						</svg>
+					</div>
+					<div>
+						<p class="text-[11px] sm:text-xs font-bold text-neutral-800 truncate">Late Blight</p>
+						<p class="text-[9px] sm:text-[10px] text-neutral-500 font-mono">Phytophthora infestans</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Interactive App Section -->
+		<section id="app" class="scroll-mt-20 max-w-2xl mx-auto px-4 py-12">
+			<!-- Ente-styled white card -->
+			<div class="bg-white border border-neutral-200/80 shadow-xl rounded-3xl p-6 sm:p-8 space-y-6">
+				<!-- Header -->
 				<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-100">
 					<div>
-						<h2 class="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">Crop Health Analysis</h2>
-						<p class="text-xs text-neutral-500 mt-0.5">LFM2.5-VL-450M vision language model executing locally in your browser.</p>
+						<h2 class="text-xl sm:text-2xl font-bold tracking-tight text-[#1a1a1a]">Crop Health Analysis</h2>
+						<p class="text-xs text-neutral-400 mt-0.5">LFM2.5-VL-450M vision language model running locally on-device.</p>
 					</div>
-					<div class="text-[11px] font-mono text-neutral-500 bg-neutral-50 border border-neutral-200/80 px-2.5 py-1 rounded-full">
+					<div class="text-[11px] font-mono text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
 						q4f16 &middot; 450M
 					</div>
 				</div>
 
-				<!-- Loading / Progress bar / Error banner -->
-				<div id="progress-container" class="hidden p-4 rounded-2xl bg-neutral-50 border border-neutral-200/90 space-y-2 text-neutral-700">
+				<!-- Progress bar container -->
+				<div id="progress-container" class="hidden p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-2 text-neutral-700">
 					<div class="flex justify-between text-xs font-mono text-neutral-600">
-						<span id="progress-file" class="break-all font-medium">Loading model...</span>
-						<span id="progress-percent" class="text-emerald-600 font-bold ml-2">0%</span>
+						<span id="progress-file" class="break-all font-medium">Loading model weights...</span>
+						<span id="progress-percent" class="text-[#00c853] font-bold ml-2">0%</span>
 					</div>
-					<div id="progress-bar-wrap" class="w-full h-1.5 rounded-full bg-neutral-200/80 overflow-hidden">
-						<div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-150" style="width: 0%"></div>
+					<div id="progress-bar-wrap" class="w-full h-1.5 rounded-full bg-neutral-200 overflow-hidden">
+						<div id="progress-fill" class="h-full bg-[#00c853] transition-all duration-150" style="width: 0%"></div>
 					</div>
 				</div>
 
-				<!-- Image Input Dropzone -->
+				<!-- Dropzone with #00c853 hover border -->
 				<div class="space-y-3">
-					<div id="dropzone" class="relative group border border-dashed border-neutral-300 hover:border-emerald-500 bg-neutral-50/70 hover:bg-emerald-50/20 rounded-2xl p-8 text-center transition cursor-pointer min-h-[220px] flex flex-col items-center justify-center overflow-hidden">
+					<div id="dropzone" class="relative group border-2 border-dashed border-neutral-300 hover:border-[#00c853] bg-neutral-50/60 hover:bg-[#00c853]/5 rounded-2xl p-8 text-center transition cursor-pointer min-h-[220px] flex flex-col items-center justify-center overflow-hidden">
 						<input type="file" id="file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
-						
+
 						<div id="upload-placeholder" class="space-y-3">
-							<div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 flex items-center justify-center mx-auto transition group-hover:scale-105">
+							<div class="w-12 h-12 rounded-2xl bg-[#00c853]/10 text-[#00c853] border border-[#00c853]/20 flex items-center justify-center mx-auto transition group-hover:scale-105">
 								<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
 								</svg>
 							</div>
 							<div>
-								<p class="text-sm font-semibold text-neutral-900">Drop plant, crop, fruit, or leaf image here</p>
-								<p class="text-xs text-neutral-500 mt-0.5">Click to browse or drag &amp; drop from your files</p>
+								<p class="text-sm font-semibold text-[#1a1a1a]">Drop plant, crop, fruit, or leaf image here</p>
+								<p class="text-xs text-neutral-400 mt-0.5">Click to browse or drag &amp; drop from your files</p>
 							</div>
 						</div>
 
-						<img id="image-preview" class="hidden max-h-72 max-w-full rounded-xl object-contain shadow-sm" alt="Selected Plant or Crop" />
+						<img id="image-preview" class="hidden max-h-72 max-w-full rounded-xl object-contain shadow-sm" alt="Selected Crop" />
 					</div>
 
 					<div class="flex gap-2">
-						<button id="btn-camera" type="button" class="flex-1 py-2.5 px-3 rounded-xl border border-neutral-200/90 bg-neutral-50 hover:bg-neutral-100 text-neutral-800 text-xs font-medium transition cursor-pointer flex items-center justify-center gap-1.5">
+						<button id="btn-camera" type="button" class="flex-1 py-2.5 px-3 rounded-full border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-xs font-medium transition cursor-pointer flex items-center justify-center gap-1.5">
 							<svg class="w-4 h-4 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
 								<circle cx="12" cy="13" r="4" />
 							</svg>
-							<span>Camera</span>
+							<span>Take Photo</span>
 						</button>
-						<button id="btn-clear" type="button" class="hidden py-2.5 px-3 rounded-xl border border-rose-200/80 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium transition cursor-pointer">
-							Remove
+						<button id="btn-clear" type="button" class="hidden py-2.5 px-4 rounded-full border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium transition cursor-pointer">
+							Clear
 						</button>
 					</div>
 				</div>
 
 				<!-- Symptoms Note -->
 				<div>
-					<input type="text" id="user-note" placeholder="Symptoms note (e.g. yellow spots appeared on lower leaves after rain)..." class="w-full bg-neutral-50 border border-neutral-200/90 text-neutral-900 placeholder-neutral-400 rounded-xl px-4 py-2.5 text-xs focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 focus:outline-none transition" />
+					<input type="text" id="user-note" placeholder="Optional notes (e.g. brown lesions noticed on lower leaves)..." class="w-full bg-neutral-50 border border-neutral-200 text-[#1a1a1a] placeholder-neutral-400 rounded-2xl px-4 py-3 text-xs focus:bg-white focus:border-[#00c853] focus:ring-2 focus:ring-[#00c853]/10 focus:outline-none transition" />
 				</div>
 
-				<!-- Action Button -->
-				<button id="btn-analyze" disabled type="button" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-2">
+				<!-- Diagnose Button matching Ente style -->
+				<button id="btn-analyze" disabled type="button" class="w-full py-3.5 rounded-full bg-[#2d2d2d] hover:bg-[#1a1a1a] disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider shadow-md transition cursor-pointer flex items-center justify-center gap-2">
 					<span id="btn-icon" class="flex items-center">
-						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<svg class="w-4 h-4 fill-none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
 						</svg>
 					</span>
@@ -177,120 +220,120 @@ import Layout from '../layouts/Layout.astro';
 				<!-- Reasoning Stream Box -->
 				<section id="reasoning-section" class="hidden pt-4 border-t border-neutral-100 space-y-2">
 					<div class="flex items-center justify-between text-xs text-neutral-500 font-mono">
-						<span class="flex items-center gap-1.5 text-emerald-600 font-medium">
-							<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-							LFM2.5 Reasoning (CoT)
+						<span class="flex items-center gap-1.5 text-[#00a846] font-medium">
+							<span class="w-1.5 h-1.5 rounded-full bg-[#00c853] animate-pulse"></span>
+							LFM2.5 Reasoning (Chain of Thought)
 						</span>
 						<span id="token-counter">0 tokens</span>
 					</div>
-					<div id="reasoning-box" class="p-4 rounded-2xl bg-neutral-900 text-neutral-200 border border-neutral-800 font-mono text-xs shadow-md leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto"></div>
+					<div id="reasoning-box" class="p-4 rounded-2xl bg-neutral-900 text-neutral-200 border border-neutral-800 font-mono text-xs leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto"></div>
 				</section>
 
 				<!-- Structured Result Card -->
-				<section id="result-card" class="hidden pt-6 border-t border-neutral-100 space-y-6 text-neutral-900">
+				<section id="result-card" class="hidden pt-6 border-t border-neutral-100 space-y-6 text-[#1a1a1a]">
 					<!-- Header -->
-					<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-200/80">
+					<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-100">
 						<div>
 							<div class="flex items-center gap-2 mb-1.5">
-								<span id="res-status" class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider"></span>
-								<span id="res-pathogen" class="px-2 py-0.5 rounded-full text-xs bg-neutral-100 text-neutral-700 font-mono border border-neutral-200"></span>
-								<span id="res-confidence" class="text-xs font-mono text-neutral-500"></span>
+								<span id="res-status" class="px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider"></span>
+								<span id="res-pathogen" class="px-2.5 py-0.5 rounded-full text-xs bg-neutral-100 text-neutral-700 font-mono"></span>
+								<span id="res-confidence" class="text-xs font-mono text-neutral-400"></span>
 							</div>
-							<h3 id="res-disease" class="text-2xl font-bold text-neutral-900 tracking-tight"></h3>
+							<h3 id="res-disease" class="text-2xl font-bold text-[#1a1a1a] tracking-tight"></h3>
 							<p id="res-crop" class="text-xs text-neutral-500 mt-0.5"></p>
 						</div>
 					</div>
 
 					<!-- Symptoms -->
 					<div>
-						<h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Observed Symptoms</h4>
+						<h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2">Observed Symptoms</h4>
 						<ul id="res-symptoms" class="text-neutral-700 list-disc list-inside space-y-1.5 text-xs"></ul>
 					</div>
 
 					<!-- Treatments Grid -->
 					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						<!-- Organic Box -->
-						<div class="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950">
+						<div class="p-5 rounded-2xl bg-[#00c853]/5 border border-[#00c853]/20 text-[#1a1a1a]">
 							<div class="flex items-center gap-1.5 mb-2.5">
-								<svg class="w-4 h-4 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<svg class="w-4 h-4 text-[#00c853]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9S3 7.03 3 12a9 9 0 0 0 9 9zm0 0v-8m0 0a4 4 0 0 1 4-4m-4 4a4 4 0 0 0-4-4" />
 								</svg>
-								<h5 class="text-xs font-bold uppercase tracking-wider text-emerald-800">Organic Remedies</h5>
+								<h5 class="text-xs font-bold uppercase tracking-wider text-[#00a846]">Organic Remedies</h5>
 							</div>
-							<ul id="res-organic" class="space-y-1.5 text-xs text-emerald-900 list-disc list-inside"></ul>
+							<ul id="res-organic" class="space-y-1.5 text-xs text-neutral-700 list-disc list-inside"></ul>
 						</div>
 
 						<!-- Chemical Box -->
-						<div class="p-5 rounded-2xl bg-sky-50/70 border border-sky-200/80 text-sky-950">
+						<div class="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 text-[#1a1a1a]">
 							<div class="flex items-center gap-1.5 mb-2.5">
-								<svg class="w-4 h-4 text-sky-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<svg class="w-4 h-4 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 21a3 3 0 0 1-3 3H7.5a3 3 0 0 1-3-3l1.5-7.5V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v7.5l1.5 7.5zM9 4v4m6-4v4" />
 								</svg>
-								<h5 class="text-xs font-bold uppercase tracking-wider text-sky-800">Chemical Controls</h5>
+								<h5 class="text-xs font-bold uppercase tracking-wider text-neutral-800">Chemical Controls</h5>
 							</div>
-							<ul id="res-chemical" class="space-y-1.5 text-xs text-sky-900 list-disc list-inside"></ul>
+							<ul id="res-chemical" class="space-y-1.5 text-xs text-neutral-700 list-disc list-inside"></ul>
 						</div>
 					</div>
 
 					<!-- Prevention Box -->
-					<div class="p-5 rounded-2xl bg-neutral-50 border border-neutral-200/80 text-neutral-800">
+					<div class="p-5 rounded-2xl bg-neutral-50 border border-neutral-200 text-[#1a1a1a]">
 						<div class="flex items-center gap-1.5 mb-2.5">
-							<svg class="w-4 h-4 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<svg class="w-4 h-4 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
 							</svg>
 							<h5 class="text-xs font-bold uppercase tracking-wider text-neutral-700">Prevention Protocols</h5>
 						</div>
-						<ul id="res-prevention" class="space-y-1.5 text-xs text-neutral-700 list-disc list-inside"></ul>
+						<ul id="res-prevention" class="space-y-1.5 text-xs text-neutral-600 list-disc list-inside"></ul>
 					</div>
 				</section>
 			</div>
 		</section>
 
-		<!-- Feature Grid -->
-		<section id="features" class="scroll-mt-24 py-12 border-t border-neutral-200/70">
-			<div class="text-center max-w-xl mx-auto mb-10 space-y-2">
-				<h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900">Engineered for absolute privacy</h2>
-				<p class="text-xs sm:text-sm text-neutral-600">Zero telemetry, local machine learning models, and uncompromising plant diagnostics.</p>
+		<!-- Feature Grid matching Ente style -->
+		<section id="features" class="scroll-mt-24 py-16 border-t border-neutral-100 max-w-6xl mx-auto px-4 sm:px-6">
+			<div class="text-center max-w-xl mx-auto mb-12 space-y-2">
+				<h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1a1a1a]">Engineered for absolute privacy</h2>
+				<p class="text-sm text-neutral-400">Zero telemetry, local machine learning models, and uncompromising crop diagnostics.</p>
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 				<!-- Card 1 -->
-				<div class="p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs hover:shadow-sm transition space-y-3">
-					<div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center">
-						<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<div class="p-8 rounded-3xl bg-white border border-neutral-200/80 shadow-sm hover:shadow-md transition space-y-4">
+					<div class="w-12 h-12 rounded-2xl bg-[#00c853]/10 text-[#00c853] flex items-center justify-center">
+						<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
 						</svg>
 					</div>
-					<h3 class="text-sm font-bold text-neutral-900">Client-Side Privacy</h3>
-					<p class="text-xs text-neutral-600 leading-relaxed">
+					<h3 class="text-base font-bold text-[#1a1a1a]">Client-Side Privacy</h3>
+					<p class="text-xs text-neutral-500 leading-relaxed">
 						Images are processed in sandbox memory directly on your GPU or CPU. No photographs ever leave your browser or get logged on remote servers.
 					</p>
 				</div>
 
 				<!-- Card 2 -->
-				<div class="p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs hover:shadow-sm transition space-y-3">
-					<div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center">
-						<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<div class="p-8 rounded-3xl bg-white border border-neutral-200/80 shadow-sm hover:shadow-md transition space-y-4">
+					<div class="w-12 h-12 rounded-2xl bg-[#00c853]/10 text-[#00c853] flex items-center justify-center">
+						<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<rect x="4" y="4" width="16" height="16" rx="2" />
 							<rect x="9" y="9" width="6" height="6" />
 							<path stroke-linecap="round" stroke-linejoin="round" d="M9 1v3m6-3v3M9 20v3m6-3v3M20 9h3m-3 6h3M1 9h3m-3 6h3" />
 						</svg>
 					</div>
-					<h3 class="text-sm font-bold text-neutral-900">LFM2.5-VL Edge Architecture</h3>
-					<p class="text-xs text-neutral-600 leading-relaxed">
+					<h3 class="text-base font-bold text-[#1a1a1a]">LFM2.5-VL Edge Engine</h3>
+					<p class="text-xs text-neutral-500 leading-relaxed">
 						Highly optimized 450M parameter vision-language model compiled to WebGPU WGSL shaders. Runs smoothly on consumer laptops and mobile devices.
 					</p>
 				</div>
 
 				<!-- Card 3 -->
-				<div class="p-6 rounded-3xl bg-white border border-neutral-200/80 shadow-2xs hover:shadow-sm transition space-y-3">
-					<div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-700 flex items-center justify-center">
-						<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<div class="p-8 rounded-3xl bg-white border border-neutral-200/80 shadow-sm hover:shadow-md transition space-y-4">
+					<div class="w-12 h-12 rounded-2xl bg-[#00c853]/10 text-[#00c853] flex items-center justify-center">
+						<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 21a3 3 0 0 1-3 3H7.5a3 3 0 0 1-3-3l1.5-7.5V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v7.5l1.5 7.5zM9 4v4m6-4v4" />
 						</svg>
 					</div>
-					<h3 class="text-sm font-bold text-neutral-900">Dual Agronomic Treatments</h3>
-					<p class="text-xs text-neutral-600 leading-relaxed">
+					<h3 class="text-base font-bold text-[#1a1a1a]">Dual Agronomic Guidance</h3>
+					<p class="text-xs text-neutral-500 leading-relaxed">
 						Instant dual recommendations pairing bio-friendly organic interventions with targeted chemical controls and seasonal preventative maintenance.
 					</p>
 				</div>
@@ -298,47 +341,47 @@ import Layout from '../layouts/Layout.astro';
 		</section>
 
 		<!-- Comparison Matrix -->
-		<section id="architecture" class="scroll-mt-24 py-12 border-t border-neutral-200/70 mb-16">
-			<div class="text-center max-w-xl mx-auto mb-10 space-y-2">
-				<h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900">Cloud AI vs PhytoAI Edge</h2>
-				<p class="text-xs sm:text-sm text-neutral-600">Why local execution is the optimal architectural pattern for agricultural diagnostics.</p>
+		<section id="architecture" class="scroll-mt-24 py-16 border-t border-neutral-100 max-w-6xl mx-auto px-4 sm:px-6 mb-16">
+			<div class="text-center max-w-xl mx-auto mb-12 space-y-2">
+				<h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1a1a1a]">Cloud AI vs PhytoAI Edge</h2>
+				<p class="text-sm text-neutral-400">Why local execution is the optimal architectural pattern for agricultural diagnostics.</p>
 			</div>
 
-			<div class="overflow-hidden bg-white border border-neutral-200/80 rounded-3xl shadow-2xs">
+			<div class="overflow-hidden bg-white border border-neutral-200/80 rounded-3xl shadow-sm">
 				<div class="overflow-x-auto">
 					<table class="w-full text-left text-xs border-collapse">
 						<thead>
-							<tr class="border-b border-neutral-200 bg-neutral-50/80 text-neutral-600 font-mono">
-								<th class="py-3.5 px-6 font-semibold">Architectural Vector</th>
-								<th class="py-3.5 px-6 font-semibold text-neutral-400">Traditional Cloud AI</th>
-								<th class="py-3.5 px-6 font-semibold text-emerald-700 bg-emerald-50/40">PhytoAI On-Device</th>
+							<tr class="border-b border-neutral-200 bg-neutral-50/70 text-neutral-600 font-mono">
+								<th class="py-4 px-6 font-semibold">Architectural Vector</th>
+								<th class="py-4 px-6 font-semibold text-neutral-400">Traditional Cloud AI</th>
+								<th class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">PhytoAI On-Device</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-neutral-100 text-neutral-700">
 							<tr>
-								<td class="py-4 px-6 font-medium text-neutral-900">Data Privacy</td>
-								<td class="py-4 px-6 text-neutral-500">Crop images uploaded to central servers</td>
-								<td class="py-4 px-6 font-semibold text-emerald-800 bg-emerald-50/20">Zero cloud transmission (100% on-device)</td>
+								<td class="py-4 px-6 font-medium text-[#1a1a1a]">Data Privacy</td>
+								<td class="py-4 px-6 text-neutral-400">Crop images uploaded to central servers</td>
+								<td class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">Zero cloud transmission (100% on-device)</td>
 							</tr>
 							<tr>
-								<td class="py-4 px-6 font-medium text-neutral-900">Offline Capability</td>
-								<td class="py-4 px-6 text-neutral-500">Requires constant high-speed connection</td>
-								<td class="py-4 px-6 font-semibold text-emerald-800 bg-emerald-50/20">Caches weights; works in field offline</td>
+								<td class="py-4 px-6 font-medium text-[#1a1a1a]">Offline Capability</td>
+								<td class="py-4 px-6 text-neutral-400">Requires continuous network connectivity</td>
+								<td class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">Caches weights; runs offline in field</td>
 							</tr>
 							<tr>
-								<td class="py-4 px-6 font-medium text-neutral-900">Inference Latency</td>
-								<td class="py-4 px-6 text-neutral-500">Variable (network round-trip + server queue)</td>
-								<td class="py-4 px-6 font-semibold text-emerald-800 bg-emerald-50/20">Real-time local GPU streaming</td>
+								<td class="py-4 px-6 font-medium text-[#1a1a1a]">Inference Latency</td>
+								<td class="py-4 px-6 text-neutral-400">Variable (network latency + queueing)</td>
+								<td class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">Instant local WebGPU streaming</td>
 							</tr>
 							<tr>
-								<td class="py-4 px-6 font-medium text-neutral-900">Operational Cost</td>
-								<td class="py-4 px-6 text-neutral-500">Per-token API fees and server subscriptions</td>
-								<td class="py-4 px-6 font-semibold text-emerald-800 bg-emerald-50/20">Zero server cost ($0.00 / perpetual)</td>
+								<td class="py-4 px-6 font-medium text-[#1a1a1a]">Operational Cost</td>
+								<td class="py-4 px-6 text-neutral-400">Per-token API fees &amp; cloud infra</td>
+								<td class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">Zero server compute ($0.00 / perpetual)</td>
 							</tr>
 							<tr>
-								<td class="py-4 px-6 font-medium text-neutral-900">Auditability</td>
-								<td class="py-4 px-6 text-neutral-500">Closed-source black box API</td>
-								<td class="py-4 px-6 font-semibold text-emerald-800 bg-emerald-50/20">Open weights, open source code</td>
+								<td class="py-4 px-6 font-medium text-[#1a1a1a]">Auditability</td>
+								<td class="py-4 px-6 text-neutral-400">Closed-source proprietary APIs</td>
+								<td class="py-4 px-6 font-semibold text-[#00a846] bg-[#00c853]/5">Open weights, open source code</td>
 							</tr>
 						</tbody>
 					</table>
@@ -347,17 +390,17 @@ import Layout from '../layouts/Layout.astro';
 		</section>
 	</main>
 
-	<!-- Minimalist Footer -->
-	<footer class="border-t border-neutral-200/80 bg-white py-12">
-		<div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
+	<!-- Clean Footer -->
+	<footer class="border-t border-neutral-100 bg-white py-12">
+		<div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400">
 			<div class="flex items-center gap-2">
-				<div class="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-					<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9S3 7.03 3 12a9 9 0 0 0 9 9zm0 0v-8m0 0a4 4 0 0 1 4-4m-4 4a4 4 0 0 0-4-4" />
+				<div class="w-6 h-6 flex items-center justify-center">
+					<svg class="w-5 h-5 fill-[#00c853]" viewBox="0 0 24 24">
+						<path d="M21 3c-6.627 0-12 5.373-12 12v1H7a5 5 0 0 0-5 5h2a3 3 0 0 1 3-3h4a2 2 0 0 0 2-2v-3c0-4.418 3.582-8 8-8V3z"/>
 					</svg>
 				</div>
-				<span class="font-bold text-neutral-800">PhytoAI</span>
-				<span>&middot; Edge AI Agronomic Diagnostic Platform</span>
+				<span class="font-bold text-[#1a1a1a]">PhytoAI</span>
+				<span>&middot; Edge AI Crop Health &amp; Agronomic Diagnostics</span>
 			</div>
 			<p class="text-center sm:text-right">
 				For research and agricultural assistance. Powered by WebGPU &amp; LFM2.5-VL.
@@ -369,7 +412,7 @@ import Layout from '../layouts/Layout.astro';
 	<div id="camera-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
 		<div class="bg-white border border-neutral-200 rounded-3xl max-w-sm w-full p-5 shadow-2xl space-y-3">
 			<div class="flex items-center justify-between">
-				<span class="text-xs font-bold text-neutral-900">Capture Plant Photo</span>
+				<span class="text-xs font-bold text-[#1a1a1a]">Capture Plant Photo</span>
 				<button id="btn-close-camera" type="button" class="text-neutral-400 hover:text-neutral-700 transition p-1">
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -380,10 +423,10 @@ import Layout from '../layouts/Layout.astro';
 				<video id="camera-video" autoplay playsinline class="w-full h-full object-cover"></video>
 			</div>
 			<div class="flex gap-2">
-				<button id="btn-snap" type="button" class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer">
+				<button id="btn-snap" type="button" class="flex-1 py-2.5 rounded-full bg-[#2d2d2d] hover:bg-[#1a1a1a] text-white font-bold text-xs transition cursor-pointer">
 					Snap Photo
 				</button>
-				<button id="btn-cancel-camera" type="button" class="py-2.5 px-3 rounded-xl border border-neutral-200 text-neutral-700 hover:bg-neutral-50 text-xs font-medium transition cursor-pointer">
+				<button id="btn-cancel-camera" type="button" class="py-2.5 px-4 rounded-full border border-neutral-200 text-neutral-700 hover:bg-neutral-50 text-xs font-medium transition cursor-pointer">
 					Cancel
 				</button>
 			</div>
@@ -444,7 +487,7 @@ import Layout from '../layouts/Layout.astro';
 
 		function showError(msg) {
 			progressContainer.classList.remove('hidden');
-			progressFile.innerHTML = `<span class="text-rose-400 font-bold">Error:</span> ${msg}`;
+			progressFile.innerHTML = `<span class="text-rose-500 font-bold">Error:</span> ${msg}`;
 			progressPercent.textContent = '!';
 			progressFill.className = 'h-full bg-rose-500';
 			btnAnalyze.disabled = false;
@@ -457,7 +500,7 @@ import Layout from '../layouts/Layout.astro';
 				try {
 					const adapter = await navigator.gpu.requestAdapter();
 					if (adapter) {
-						webgpuDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+						webgpuDot.className = 'w-2 h-2 rounded-full bg-[#00c853]';
 						webgpuStatus.textContent = 'WebGPU Ready';
 						return true;
 					}
@@ -465,7 +508,7 @@ import Layout from '../layouts/Layout.astro';
 					console.warn(e);
 				}
 			}
-			webgpuDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+			webgpuDot.className = 'w-2 h-2 rounded-full bg-amber-400';
 			webgpuStatus.textContent = 'WebGPU Fallback';
 			return false;
 		}
@@ -536,8 +579,8 @@ import Layout from '../layouts/Layout.astro';
 			const isHealthy = data.status === 'healthy';
 			resStatus.textContent = isHealthy ? 'HEALTHY' : 'DISEASED';
 			resStatus.className = isHealthy 
-				? 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300'
-				: 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300';
+				? 'px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[#00c853]/10 text-[#00a846] border border-[#00c853]/30'
+				: 'px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300';
 
 			if (data.pathogen_type) {
 				resPathogen.textContent = data.pathogen_type.toUpperCase();
@@ -547,7 +590,7 @@ import Layout from '../layouts/Layout.astro';
 			}
 			resConfidence.textContent = `Confidence: ${(data.confidence || 'medium').toUpperCase()}`;
 			resDisease.textContent = data.disease_name || 'Diagnosis';
-			resCrop.innerHTML = `Crop: <span class="text-neutral-900 font-semibold">${data.crop || 'Plant'}</span>`;
+			resCrop.innerHTML = `Crop: <span class="text-[#1a1a1a] font-semibold">${data.crop || 'Plant'}</span>`;
 
 			resSymptoms.innerHTML = (data.key_symptoms || []).map(s => `<li>${s}</li>`).join('');
 			resOrganic.innerHTML = (data.organic_treatment || []).map(t => `<li>${t}</li>`).join('');
@@ -591,20 +634,20 @@ import Layout from '../layouts/Layout.astro';
 			dropzone.addEventListener(type, (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				dropzone.classList.add('border-emerald-500', 'bg-emerald-50/40');
+				dropzone.classList.add('border-[#00c853]', 'bg-[#00c853]/10');
 			});
 		});
 
 		dropzone.addEventListener('dragleave', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/40');
+			dropzone.classList.remove('border-[#00c853]', 'bg-[#00c853]/10');
 		});
 
 		dropzone.addEventListener('drop', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			dropzone.classList.remove('border-emerald-500', 'bg-emerald-50/40');
+			dropzone.classList.remove('border-[#00c853]', 'bg-[#00c853]/10');
 			const file = e.dataTransfer?.files?.[0];
 			if (file && file.type.startsWith('image/')) {
 				const reader = new FileReader();
