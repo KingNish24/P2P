@@ -8,9 +8,10 @@ import {
 } from '@huggingface/transformers';
 import { StructuredOutputProcessor } from '@huggingface/transformers-structured-output';
 
-// Configure transformers.js for edge browser environment
+// Configure transformers.js for edge browser environment without cross-origin worker issues
 env.allowLocalModels = false;
-env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/';
+env.backends.onnx.wasm.numThreads = 1;
+env.backends.onnx.wasm.proxy = false;
 
 const MODEL_ID = 'onnx-community/gemma-4-E2B-it-qat-mobile-ONNX';
 const DTYPE = 'q2f16';
@@ -19,6 +20,24 @@ let tokenizer = null;
 let imageProcessor = null;
 let model = null;
 let structuredProcessor = null;
+
+// Convert base64 dataUrl to Blob without using fetch() to prevent worker data: CORS restrictions
+function dataUrlToBlob(dataUrl) {
+  if (dataUrl instanceof Blob) return dataUrl;
+  if (typeof dataUrl === 'string' && dataUrl.startsWith('data:')) {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+  return dataUrl;
+}
 
 const DIAGNOSIS_SCHEMA = {
   type: 'object',
@@ -167,11 +186,12 @@ self.addEventListener('message', async (event) => {
         message: 'Gemma reasoning over crop symptoms...'
       });
 
-      // 1. Process image
+      // 1. Process image via Blob (bypasses fetch() CORS restrictions)
       let imageInputs = null;
       let softTokenCount = 280;
       if (image) {
-        const rawImage = await RawImage.fromURL(image);
+        const imageBlob = dataUrlToBlob(image);
+        const rawImage = await RawImage.fromBlob(imageBlob);
         imageInputs = await imageProcessor(rawImage);
         if (imageInputs.num_soft_tokens_per_image && imageInputs.num_soft_tokens_per_image[0]) {
           softTokenCount = imageInputs.num_soft_tokens_per_image[0];
