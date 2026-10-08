@@ -43,7 +43,7 @@ if (!isPthread) {
     properties: {
       reasoning: {
         type: 'string',
-        description: 'Step-by-step visual reasoning: inspect leaf discoloration, lesions, concentric rings, chlorosis, necrosis, veins, and evaluate pathogen type before reaching diagnosis.'
+        description: 'Step-by-step visual reasoning: inspect leaf discoloration, lesions, concentric rings, chlorosis, necrosis, veins, and evaluate pathogen type before reaching diagnosis. Even think about fixes and remedies too along with preventions if any disesase is present. Think hard.'
       },
       crop: {
         type: 'string',
