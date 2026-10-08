@@ -20,13 +20,13 @@ import Layout from '../layouts/Layout.astro';
 				On-device agricultural diagnosis powered by <span class="text-slate-200">Gemma 4 E2B QAT (q2f16)</span>.
 			</p>
 
-			<!-- Loading / Progress bar (hidden until active) -->
-			<div id="progress-container" class="hidden mt-4 p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+			<!-- Loading / Progress bar / Error banner -->
+			<div id="progress-container" class="hidden mt-4 p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
 				<div class="flex justify-between text-xs font-mono text-slate-400">
-					<span id="progress-file" class="truncate max-w-xs">Loading model...</span>
-					<span id="progress-percent" class="text-emerald-400 font-bold">0%</span>
+					<span id="progress-file" class="break-all">Loading model...</span>
+					<span id="progress-percent" class="text-emerald-400 font-bold ml-2">0%</span>
 				</div>
-				<div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+				<div id="progress-bar-wrap" class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
 					<div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-150" style="width: 0%"></div>
 				</div>
 			</div>
@@ -161,6 +161,7 @@ import Layout from '../layouts/Layout.astro';
 		const progressFile = document.getElementById('progress-file');
 		const progressPercent = document.getElementById('progress-percent');
 		const progressFill = document.getElementById('progress-fill');
+		const progressBarWrap = document.getElementById('progress-bar-wrap');
 
 		const dropzone = document.getElementById('dropzone');
 		const fileInput = document.getElementById('file-input');
@@ -194,6 +195,16 @@ import Layout from '../layouts/Layout.astro';
 		const btnCancelCamera = document.getElementById('btn-cancel-camera');
 		const btnSnap = document.getElementById('btn-snap');
 
+		function showError(msg) {
+			progressContainer.classList.remove('hidden');
+			progressFile.innerHTML = `<span class="text-rose-400 font-bold">Error:</span> ${msg}`;
+			progressPercent.textContent = '!';
+			progressFill.className = 'h-full bg-rose-500';
+			btnAnalyze.disabled = false;
+			btnText.textContent = 'Retry Diagnosis';
+			btnIcon.textContent = '⚠️';
+		}
+
 		async function checkWebGPU() {
 			if ('gpu' in navigator) {
 				try {
@@ -218,6 +229,11 @@ import Layout from '../layouts/Layout.astro';
 			worker = new Worker(new URL('../scripts/ai-worker.js', import.meta.url), {
 				type: 'module'
 			});
+
+			worker.onerror = (e) => {
+				console.error('Worker error event:', e);
+				showError(e.message || 'Worker script failed to execute (CORS or network error).');
+			};
 
 			worker.addEventListener('message', (event) => {
 				const { type, status, message, progress, token, fullText, data } = event.data;
@@ -260,11 +276,7 @@ import Layout from '../layouts/Layout.astro';
 				}
 
 				if (type === 'error') {
-					progressContainer.classList.remove('hidden');
-					progressFile.textContent = `Error: ${message}`;
-					btnAnalyze.disabled = false;
-					btnText.textContent = 'Retry Diagnosis';
-					btnIcon.textContent = '⚠️';
+					showError(message);
 				}
 			});
 

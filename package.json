@@ -17,6 +17,7 @@
     "@huggingface/transformers-structured-output": "^4.3.1",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.7",
+    "onnxruntime-web": "^1.30.0",
     "tailwindcss": "^4.3.3"
   },
   "allowScripts": {
