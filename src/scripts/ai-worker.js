@@ -240,10 +240,12 @@ if (!isPthread) {
 
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
+        Respond strictly in JSON matching this schema:
+${JSON.stringify(DIAGNOSIS_SCHEMA, null, 2)}.
+REMINDER: EVERYTHING DOES NOT HAVE Disease. SOme thing can be HEALTHLY TOO :)
 Examine this crops carefully. Reason first good length. Try to answer all points plz and Think long to identify real disease correctly. DO not fake the disease.
 ${userNote ? `Farmer Note: "${userNote}"` : ''}
-Respond strictly in JSON matching this schema:
-${JSON.stringify(DIAGNOSIS_SCHEMA, null, 2)}
+
 Reasoning must be the first property.`;
 
         const messages = [
