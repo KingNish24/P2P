@@ -56,7 +56,7 @@ if (!isPthread) {
       },
       disease_name: {
         type: 'string',
-        description: 'Specific common or scientific name of disease identified. Identify it during reasoning time try to be more accurate based on the conditions. or "Healthy Leaf" if none'
+        description: 'Specific common or scientific name of disease identified. Identify it during reasoning time try to be more accurate based on the conditions. or "Healthy Leaf" if none. Sir, disease must be think carefully about.'
       },
       confidence: {
         type: 'string',
@@ -240,7 +240,7 @@ if (!isPthread) {
 
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
-Examine this crops carefully. Reason first good length.
+Examine this crops carefully. Reason first good length. Try to answer all points plz and Think long to identify real disease correctly. DO not fake the disease.
 ${userNote ? `Farmer Note: "${userNote}"` : ''}
 Respond strictly in JSON matching this schema:
 ${JSON.stringify(DIAGNOSIS_SCHEMA, null, 2)}
