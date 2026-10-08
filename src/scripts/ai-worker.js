@@ -246,14 +246,7 @@ if (!isPthread) {
 
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
-Examine this crop leaf carefully.
-CRITICAL: Many leaves submitted are completely HEALTHY. If the leaf is uniform green, normal venation, and has no distinct lesions, spots, or rot, you MUST classify it as healthy: status='healthy', disease_name='Healthy Leaf', pathogen_type='none', confidence='high'.
-Only diagnose "diseased" if visible, distinct pathogen symptoms (e.g. brown/black lesions, halos, fungal sporulation, wilting) are unmistakably present.
-
-In the "reasoning" field, deduce step-by-step:
-1. Leaf surface condition, lesions, spot patterns, halos, veins, or healthy color.
-2. Distinguish between fungal, bacterial, viral, nutrient deficiency, or healthy tissue.
-3. Conclude diagnosis and actionable evidence-based treatments.
+Examine this crops carefully. Always reason first.
 ${userNote ? `Farmer Note: "${userNote}"` : ''}
 Respond strictly in JSON matching the schema with reasoning as the first property.`;
 
