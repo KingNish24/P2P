@@ -2,71 +2,386 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Astro + Tailwind CSS | Built with Nub & Cloudflare Ready">
-	<main class="max-w-5xl mx-auto px-6 py-16 sm:py-24">
-		<header class="text-center mb-16">
-			<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium tracking-wide uppercase mb-6">
-				<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-				Static Cloudflare Ready &middot; Powered by Nub
+<Layout title="PhytoAI | Crop Disease Diagnosis">
+	<main class="max-w-3xl mx-auto px-4 py-12">
+		<!-- Minimalist Header -->
+		<header class="mb-8">
+			<div class="flex items-center justify-between mb-3">
+				<span class="text-xs font-mono uppercase tracking-widest text-emerald-400">PhytoAI &middot; Gemma 4 WebGPU</span>
+				<div id="webgpu-badge" class="flex items-center gap-1.5 text-[11px] font-mono text-slate-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-full">
+					<span id="webgpu-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+					<span id="webgpu-status">WebGPU</span>
+				</div>
 			</div>
-			<h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6">
-				Astro + <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400">Tailwind CSS</span>
+			<h1 class="text-3xl font-bold tracking-tight text-white mb-2">
+				Crop Disease &amp; Treatment
 			</h1>
-			<p class="max-w-2xl mx-auto text-lg text-slate-400 leading-relaxed">
-				Supercharged static site created with Astro, styled with Tailwind CSS, managed by the blazingly fast <code class="text-indigo-300 font-mono bg-slate-900 px-2 py-0.5 rounded border border-slate-800">nub</code> toolkit, and ready for deployment to Cloudflare.
+			<p class="text-sm text-slate-400">
+				On-device agricultural diagnosis powered by <span class="text-slate-200">Gemma 4 E2B QAT (q2f16)</span>.
 			</p>
+
+			<!-- Loading / Progress bar (hidden until active) -->
+			<div id="progress-container" class="hidden mt-4 p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+				<div class="flex justify-between text-xs font-mono text-slate-400">
+					<span id="progress-file" class="truncate max-w-xs">Loading model...</span>
+					<span id="progress-percent" class="text-emerald-400 font-bold">0%</span>
+				</div>
+				<div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+					<div id="progress-fill" class="h-full bg-emerald-500 transition-all duration-150" style="width: 0%"></div>
+				</div>
+			</div>
 		</header>
 
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-			<div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl hover:border-slate-700 transition">
-				<div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center font-bold text-lg mb-4 border border-orange-500/20">
-					🚀
+		<!-- Minimalist Form -->
+		<section class="space-y-6">
+			<!-- Image Input Area -->
+			<div class="space-y-2">
+				<div id="dropzone" class="relative group border border-dashed border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 text-center transition cursor-pointer bg-slate-900/50 min-h-[220px] flex flex-col items-center justify-center overflow-hidden">
+					<input type="file" id="file-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
+					
+					<div id="upload-placeholder" class="space-y-2">
+						<div class="w-10 h-10 rounded-full bg-slate-800/80 mx-auto flex items-center justify-center text-xl text-slate-400">
+							🍃
+						</div>
+						<p class="text-xs text-slate-300 font-medium">Drop leaf image here, or browse</p>
+						<p class="text-[11px] text-slate-500">Supports camera capture or file upload</p>
+					</div>
+
+					<img id="image-preview" class="hidden max-h-64 max-w-full rounded-xl object-contain shadow-lg" alt="Selected Leaf" />
 				</div>
-				<h2 class="text-xl font-semibold text-white mb-2">Astro Static Output</h2>
-				<p class="text-sm text-slate-400 leading-relaxed">
-					Zero-JS by default, pristine HTML rendered at build time for extreme performance, security, and instant page loads.
-				</p>
+
+				<div class="flex gap-2">
+					<button id="btn-camera" type="button" class="flex-1 py-2 px-3 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium transition cursor-pointer flex items-center justify-center gap-1.5">
+						<span>📷</span> Camera
+					</button>
+					<button id="btn-clear" type="button" class="hidden py-2 px-3 rounded-xl border border-rose-900/40 bg-rose-950/20 hover:bg-rose-900/40 text-rose-300 text-xs font-medium transition cursor-pointer">
+						Remove
+					</button>
+				</div>
 			</div>
 
-			<div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl hover:border-slate-700 transition">
-				<div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold text-lg mb-4 border border-cyan-500/20">
-					🎨
-				</div>
-				<h2 class="text-xl font-semibold text-white mb-2">Tailwind CSS v4</h2>
-				<p class="text-sm text-slate-400 leading-relaxed">
-					Next-generation CSS engine powered by <code class="text-cyan-300">@tailwindcss/vite</code> with blazing fast compilation and zero boilerplate.
-				</p>
+			<!-- Optional Note -->
+			<div>
+				<input type="text" id="user-note" placeholder="Symptoms note (e.g. leaf spots appeared after rain)..." class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition" />
 			</div>
 
-			<div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl hover:border-slate-700 transition">
-				<div class="w-10 h-10 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 flex items-center justify-center font-bold text-lg mb-4 border border-fuchsia-500/20">
-					⚡
-				</div>
-				<h2 class="text-xl font-semibold text-white mb-2">Cloudflare Deploy</h2>
-				<p class="text-sm text-slate-400 leading-relaxed">
-					Ready for global edge delivery via Cloudflare Pages or Cloudflare Workers with static assets.
-				</p>
-			</div>
-		</div>
+			<!-- Action Button -->
+			<button id="btn-analyze" disabled type="button" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-2">
+				<span id="btn-icon">⚡</span>
+				<span id="btn-text">Diagnose Leaf</span>
+			</button>
+		</section>
 
-		<section class="rounded-2xl bg-slate-900/90 border border-slate-800 p-8 shadow-2xl">
-			<h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-				<span class="text-emerald-400">⚡</span> Quick Commands with Nub
-			</h3>
-			<div class="space-y-3 font-mono text-sm">
-				<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-					<span class="text-slate-400">Start dev server</span>
-					<code class="text-indigo-300 mt-1 sm:mt-0 font-medium">nub run dev</code>
+		<!-- Reasoning Stream Box (First, as requested) -->
+		<section id="reasoning-section" class="hidden mt-8 space-y-2">
+			<div class="flex items-center justify-between text-xs text-slate-400 font-mono">
+				<span class="flex items-center gap-1.5 text-indigo-400">
+					<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+					Gemma Reasoning (CoT)
+				</span>
+				<span id="token-counter">0 tokens</span>
+			</div>
+			<div id="reasoning-box" class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 font-mono text-xs text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto"></div>
+		</section>
+
+		<!-- Minimalist Structured Result Card -->
+		<section id="result-card" class="hidden mt-8 rounded-2xl border border-slate-800 bg-slate-900/90 p-6 space-y-6">
+			<!-- Header -->
+			<div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800">
+				<div>
+					<div class="flex items-center gap-2 mb-1">
+						<span id="res-status" class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider"></span>
+						<span id="res-pathogen" class="px-2 py-0.5 rounded-full text-xs bg-slate-800 text-slate-300 font-mono"></span>
+						<span id="res-confidence" class="text-xs font-mono text-slate-500"></span>
+					</div>
+					<h2 id="res-disease" class="text-xl font-bold text-white"></h2>
+					<p id="res-crop" class="text-xs text-slate-400"></p>
 				</div>
-				<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-					<span class="text-slate-400">Build static site</span>
-					<code class="text-indigo-300 mt-1 sm:mt-0 font-medium">nub run build</code>
+			</div>
+
+			<!-- Symptoms -->
+			<div>
+				<h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Observed Symptoms</h3>
+				<ul id="res-symptoms" class="space-y-1 text-xs text-slate-300 list-disc list-inside"></ul>
+			</div>
+
+			<!-- Treatments -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/20">
+					<h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">🌿 Organic Remedies</h3>
+					<ul id="res-organic" class="space-y-1.5 text-xs text-emerald-200/90 list-disc list-inside"></ul>
 				</div>
-				<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-					<span class="text-slate-400">Deploy to Cloudflare Pages</span>
-					<code class="text-indigo-300 mt-1 sm:mt-0 font-medium">nub run deploy</code>
+
+				<div class="p-4 rounded-xl bg-slate-950/60 border border-cyan-500/20">
+					<h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-2">🧪 Chemical Controls</h3>
+					<ul id="res-chemical" class="space-y-1.5 text-xs text-cyan-200/90 list-disc list-inside"></ul>
 				</div>
+			</div>
+
+			<!-- Prevention -->
+			<div class="p-4 rounded-xl bg-slate-950/40 border border-slate-800">
+				<h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">🛡️ Prevention</h3>
+				<ul id="res-prevention" class="space-y-1.5 text-xs text-slate-300 list-disc list-inside"></ul>
 			</div>
 		</section>
+
+		<!-- Camera Modal -->
+		<div id="camera-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+			<div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-4 space-y-3">
+				<div class="flex items-center justify-between">
+					<span class="text-xs font-bold text-white">Capture Leaf</span>
+					<button id="btn-close-camera" type="button" class="text-slate-400 hover:text-white">&times;</button>
+				</div>
+				<div class="relative rounded-xl overflow-hidden bg-black aspect-square">
+					<video id="camera-video" autoplay playsinline class="w-full h-full object-cover"></video>
+				</div>
+				<div class="flex gap-2">
+					<button id="btn-snap" type="button" class="flex-1 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs">
+						Snap Photo
+					</button>
+					<button id="btn-cancel-camera" type="button" class="py-2 px-3 rounded-xl border border-slate-800 text-slate-300 text-xs">
+						Cancel
+					</button>
+				</div>
+			</div>
+		</div>
 	</main>
+
+	<!-- Client Script -->
+	<script>
+		let worker = null;
+		let selectedImageDataUrl = null;
+		let cameraStream = null;
+		let tokenCount = 0;
+
+		const webgpuDot = document.getElementById('webgpu-dot');
+		const webgpuStatus = document.getElementById('webgpu-status');
+
+		const progressContainer = document.getElementById('progress-container');
+		const progressFile = document.getElementById('progress-file');
+		const progressPercent = document.getElementById('progress-percent');
+		const progressFill = document.getElementById('progress-fill');
+
+		const dropzone = document.getElementById('dropzone');
+		const fileInput = document.getElementById('file-input');
+		const uploadPlaceholder = document.getElementById('upload-placeholder');
+		const imagePreview = document.getElementById('image-preview');
+		const btnClear = document.getElementById('btn-clear');
+		const userNoteInput = document.getElementById('user-note');
+		const btnAnalyze = document.getElementById('btn-analyze');
+		const btnIcon = document.getElementById('btn-icon');
+		const btnText = document.getElementById('btn-text');
+
+		const reasoningSection = document.getElementById('reasoning-section');
+		const reasoningBox = document.getElementById('reasoning-box');
+		const tokenCounter = document.getElementById('token-counter');
+
+		const resultCard = document.getElementById('result-card');
+		const resStatus = document.getElementById('res-status');
+		const resPathogen = document.getElementById('res-pathogen');
+		const resConfidence = document.getElementById('res-confidence');
+		const resDisease = document.getElementById('res-disease');
+		const resCrop = document.getElementById('res-crop');
+		const resSymptoms = document.getElementById('res-symptoms');
+		const resOrganic = document.getElementById('res-organic');
+		const resChemical = document.getElementById('res-chemical');
+		const resPrevention = document.getElementById('res-prevention');
+
+		const btnCamera = document.getElementById('btn-camera');
+		const cameraModal = document.getElementById('camera-modal');
+		const cameraVideo = document.getElementById('camera-video');
+		const btnCloseCamera = document.getElementById('btn-close-camera');
+		const btnCancelCamera = document.getElementById('btn-cancel-camera');
+		const btnSnap = document.getElementById('btn-snap');
+
+		async function checkWebGPU() {
+			if ('gpu' in navigator) {
+				try {
+					const adapter = await navigator.gpu.requestAdapter();
+					if (adapter) {
+						webgpuDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+						webgpuStatus.textContent = 'WebGPU Ready';
+						return true;
+					}
+				} catch (e) {
+					console.warn(e);
+				}
+			}
+			webgpuDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+			webgpuStatus.textContent = 'WebGPU Fallback';
+			return false;
+		}
+
+		function getWorker() {
+			if (worker) return worker;
+
+			worker = new Worker(new URL('../scripts/ai-worker.js', import.meta.url), {
+				type: 'module'
+			});
+
+			worker.addEventListener('message', (event) => {
+				const { type, status, message, progress, token, fullText, data } = event.data;
+
+				if (type === 'status') {
+					if (status === 'loading') {
+						progressContainer.classList.remove('hidden');
+						progressFile.textContent = message;
+						btnText.textContent = 'Loading Weights...';
+					} else if (status === 'ready') {
+						progressContainer.classList.add('hidden');
+					} else if (status === 'analyzing') {
+						btnText.textContent = 'Reasoning...';
+					}
+				}
+
+				if (type === 'progress') {
+					progressContainer.classList.remove('hidden');
+					if (progress.file) progressFile.textContent = progress.file;
+					if (progress.progress !== undefined) {
+						const pct = Math.round(progress.progress);
+						progressPercent.textContent = `${pct}%`;
+						progressFill.style.width = `${pct}%`;
+					}
+				}
+
+				if (type === 'token') {
+					tokenCount++;
+					tokenCounter.textContent = `${tokenCount} tokens`;
+					reasoningSection.classList.remove('hidden');
+					reasoningBox.textContent = fullText;
+					reasoningBox.scrollTop = reasoningBox.scrollHeight;
+				}
+
+				if (type === 'result') {
+					renderResult(data);
+					btnAnalyze.disabled = false;
+					btnText.textContent = 'Diagnose Leaf';
+					btnIcon.textContent = '⚡';
+				}
+
+				if (type === 'error') {
+					progressContainer.classList.remove('hidden');
+					progressFile.textContent = `Error: ${message}`;
+					btnAnalyze.disabled = false;
+					btnText.textContent = 'Retry Diagnosis';
+					btnIcon.textContent = '⚠️';
+				}
+			});
+
+			return worker;
+		}
+
+		function renderResult(data) {
+			resultCard.classList.remove('hidden');
+
+			const isHealthy = data.status === 'healthy';
+			resStatus.textContent = isHealthy ? 'HEALTHY' : 'DISEASED';
+			resStatus.className = isHealthy 
+				? 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+				: 'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30';
+
+			resPathogen.textContent = (data.pathogen_type || 'pathogen').toUpperCase();
+			resConfidence.textContent = `Confidence: ${(data.confidence || 'medium').toUpperCase()}`;
+			resDisease.textContent = data.disease_name || 'Diagnosis';
+			resCrop.innerHTML = `Crop: <span class="text-slate-200 font-semibold">${data.crop || 'Plant'}</span>`;
+
+			resSymptoms.innerHTML = (data.key_symptoms || []).map(s => `<li>${s}</li>`).join('');
+			resOrganic.innerHTML = (data.organic_treatment || []).map(t => `<li>${t}</li>`).join('');
+			resChemical.innerHTML = (data.chemical_treatment || []).map(c => `<li>${c}</li>`).join('');
+			resPrevention.innerHTML = (data.prevention_measures || []).map(p => `<li>${p}</li>`).join('');
+
+			resultCard.scrollIntoView({ behavior: 'smooth' });
+		}
+
+		function setImage(dataUrl) {
+			selectedImageDataUrl = dataUrl;
+			imagePreview.src = dataUrl;
+			imagePreview.classList.remove('hidden');
+			uploadPlaceholder.classList.add('hidden');
+			btnClear.classList.remove('hidden');
+			btnAnalyze.disabled = false;
+		}
+
+		function clearImage() {
+			selectedImageDataUrl = null;
+			imagePreview.src = '';
+			imagePreview.classList.add('hidden');
+			uploadPlaceholder.classList.remove('hidden');
+			btnClear.classList.add('hidden');
+			btnAnalyze.disabled = true;
+			fileInput.value = '';
+			resultCard.classList.add('hidden');
+			reasoningSection.classList.add('hidden');
+		}
+
+		fileInput.addEventListener('change', (e) => {
+			const file = e.target.files[0];
+			if (file) {
+				const reader = new FileReader();
+				reader.onload = (evt) => setImage(evt.target.result);
+				reader.readAsDataURL(file);
+			}
+		});
+
+		btnClear.addEventListener('click', clearImage);
+
+		btnAnalyze.addEventListener('click', () => {
+			if (!selectedImageDataUrl) return;
+
+			tokenCount = 0;
+			tokenCounter.textContent = '0 tokens';
+			reasoningSection.classList.remove('hidden');
+			reasoningBox.textContent = '// Model starting reasoning phase (first field)...\n';
+
+			btnAnalyze.disabled = true;
+			btnText.textContent = 'Thinking...';
+			btnIcon.textContent = '⏳';
+
+			const w = getWorker();
+			w.postMessage({
+				type: 'analyze',
+				data: {
+					image: selectedImageDataUrl,
+					userNote: userNoteInput.value.trim()
+				}
+			});
+		});
+
+		// Camera
+		btnCamera.addEventListener('click', async () => {
+			cameraModal.classList.remove('hidden');
+			try {
+				cameraStream = await navigator.mediaDevices.getUserMedia({
+					video: { facingMode: 'environment' }
+				});
+				cameraVideo.srcObject = cameraStream;
+			} catch (err) {
+				alert('Camera access denied or unavailable: ' + err.message);
+				cameraModal.classList.add('hidden');
+			}
+		});
+
+		function stopCamera() {
+			if (cameraStream) {
+				cameraStream.getTracks().forEach(t => t.stop());
+				cameraStream = null;
+			}
+			cameraModal.classList.add('hidden');
+		}
+
+		btnCloseCamera.addEventListener('click', stopCamera);
+		btnCancelCamera.addEventListener('click', stopCamera);
+
+		btnSnap.addEventListener('click', () => {
+			const canvas = document.createElement('canvas');
+			canvas.width = cameraVideo.videoWidth || 640;
+			canvas.height = cameraVideo.videoHeight || 480;
+			const ctx = canvas.getContext('2d');
+			ctx.drawImage(cameraVideo, 0, 0, canvas.width, canvas.height);
+			setImage(canvas.toDataURL('image/jpeg', 0.85));
+			stopCamera();
+		});
+
+		checkWebGPU();
+	</script>
 </Layout>

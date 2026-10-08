@@ -7,12 +7,14 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node -e \"const fs=require('fs'),p=require('path'),d='dist/_astro';if(fs.existsSync(d))fs.readdirSync(d).forEach(f=>{if(f.endsWith('.wasm')&&fs.statSync(p.join(d,f)).size>25*1024*1024)fs.unlinkSync(p.join(d,f))})\"",
     "preview": "astro preview",
     "astro": "astro",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.1",
+    "@huggingface/transformers-structured-output": "^4.3.1",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.7",
     "tailwindcss": "^4.3.3"
@@ -29,7 +31,9 @@
   },
   "allowBuilds": {
     "esbuild": true,
-    "workerd": true
+    "workerd": true,
+    "onnxruntime-node": true,
+    "protobufjs": true
   },
   "devDependencies": {
     "wrangler": "^4.148.0"
