@@ -274,8 +274,7 @@ Reasoning must be the first property.`;
         const output = await model.generate({
           ...inputs,
           max_new_tokens: 4096,
-          do_sample: true,
-          temperature: 0.3,
+          do_sample: false,
           streamer: streamer,
           logits_processor: [structuredProcessor]
         });
