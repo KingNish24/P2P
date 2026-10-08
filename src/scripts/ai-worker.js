@@ -11,6 +11,9 @@ import { StructuredOutputProcessor } from '@huggingface/transformers-structured-
 const isPthread = typeof self !== 'undefined' && self.name?.startsWith('em-pthread');
 
 if (!isPthread) {
+  if (typeof self !== 'undefined' && self.location && self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
+    env.remoteHost = self.location.origin + '/hf';
+  }
   env.allowLocalModels = false;
   env.backends.onnx.wasm.numThreads = 1;
   env.backends.onnx.wasm.proxy = false;
