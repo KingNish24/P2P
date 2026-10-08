@@ -1,0 +1,72 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Astro + Tailwind CSS | Built with Nub & Cloudflare Ready">
+	<main class="max-w-5xl mx-auto px-6 py-16 sm:py-24">
+		<header class="text-center mb-16">
+			<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-medium tracking-wide uppercase mb-6">
+				<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+				Static Cloudflare Ready &middot; Powered by Nub
+			</div>
+			<h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6">
+				Astro + <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-fuchsia-400">Tailwind CSS</span>
+			</h1>
+			<p class="max-w-2xl mx-auto text-lg text-slate-400 leading-relaxed">
+				Supercharged static site created with Astro, styled with Tailwind CSS, managed by the blazingly fast <code class="text-indigo-300 font-mono bg-slate-900 px-2 py-0.5 rounded border border-slate-800">nub</code> toolkit, and ready for deployment to Cloudflare.
+			</p>
+		</header>
+
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+			<div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl hover:border-slate-700 transition">
+				<div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center font-bold text-lg mb-4 border border-orange-500/20">
+					🚀
+				</div>
+				<h2 class="text-xl font-semibold text-white mb-2">Astro Static Output</h2>
+				<p class="text-sm text-slate-400 leading-relaxed">
+					Zero-JS by default, pristine HTML rendered at build time for extreme performance, security, and instant page loads.
+				</p>
+			</div>
+
+			<div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl hover:border-slate-700 transition">
+				<div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold text-lg mb-4 border border-cyan-500/20">
+					🎨
+				</div>
+				<h2 class="text-xl font-semibold text-white mb-2">Tailwind CSS v4</h2>
+				<p class="text-sm text-slate-400 leading-relaxed">
+					Next-generation CSS engine powered by <code class="text-cyan-300">@tailwindcss/vite</code> with blazing fast compilation and zero boilerplate.
+				</p>
+			</div>
+
+			<div class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl hover:border-slate-700 transition">
+				<div class="w-10 h-10 rounded-xl bg-fuchsia-500/10 text-fuchsia-400 flex items-center justify-center font-bold text-lg mb-4 border border-fuchsia-500/20">
+					⚡
+				</div>
+				<h2 class="text-xl font-semibold text-white mb-2">Cloudflare Deploy</h2>
+				<p class="text-sm text-slate-400 leading-relaxed">
+					Ready for global edge delivery via Cloudflare Pages or Cloudflare Workers with static assets.
+				</p>
+			</div>
+		</div>
+
+		<section class="rounded-2xl bg-slate-900/90 border border-slate-800 p-8 shadow-2xl">
+			<h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+				<span class="text-emerald-400">⚡</span> Quick Commands with Nub
+			</h3>
+			<div class="space-y-3 font-mono text-sm">
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
+					<span class="text-slate-400">Start dev server</span>
+					<code class="text-indigo-300 mt-1 sm:mt-0 font-medium">nub run dev</code>
+				</div>
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
+					<span class="text-slate-400">Build static site</span>
+					<code class="text-indigo-300 mt-1 sm:mt-0 font-medium">nub run build</code>
+				</div>
+				<div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
+					<span class="text-slate-400">Deploy to Cloudflare Pages</span>
+					<code class="text-indigo-300 mt-1 sm:mt-0 font-medium">nub run deploy</code>
+				</div>
+			</div>
+		</section>
+	</main>
+</Layout>
