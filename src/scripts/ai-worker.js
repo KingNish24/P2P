@@ -152,9 +152,9 @@ if (!isPthread) {
 
       model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
         dtype: {
-          vision_encoder: "fp16",
-          embed_tokens: "fp16",
-          decoder_model_merged: "fp16",
+          vision_encoder: "q4f16",
+          embed_tokens: "q4f16",
+          decoder_model_merged: "q4f16",
         },
         device: 'webgpu',
         progress_callback: progressCallback
