@@ -52,35 +52,54 @@ if (!isPthread) {
       },
       status: {
         type: 'string',
+        description: 'Plant health condition: "healthy" if no disease or pest found, or "diseased" if visual symptoms or pest damage exist',
         enum: ['healthy', 'diseased']
       },
       disease_name: {
         type: 'string',
-        description: 'Specific disease name or "Healthy Leaf" if healthy'
+        description: 'Specific common or scientific name of disease identified (e.g. Late Blight, Powdery Mildew, Leaf Spot) or "Healthy Leaf" if none'
       },
       pathogen_type: {
         type: 'string',
+        description: 'Biological category of causal agent: fungal, bacterial, viral, pest, environmental, or none if healthy',
         enum: ['fungal', 'bacterial', 'viral', 'pest', 'environmental', 'none']
       },
       confidence: {
         type: 'string',
+        description: 'Confidence level based on visual clarity and distinctness of symptoms: high, medium, or low',
         enum: ['high', 'medium', 'low']
       },
       key_symptoms: {
         type: 'array',
-        items: { type: 'string' }
+        description: 'List of 2 to 4 observable visual symptoms seen on the leaf (e.g. concentric brown rings, water-soaked lesions, yellow margins)',
+        items: {
+          type: 'string',
+          description: 'Observable visual symptom'
+        }
       },
       organic_treatment: {
         type: 'array',
-        items: { type: 'string' }
+        description: 'List of actionable eco-friendly or organic control treatments (e.g. neem oil spray, copper soap, bio-fungicides, removing infected foliage)',
+        items: {
+          type: 'string',
+          description: 'Organic treatment measure'
+        }
       },
       chemical_treatment: {
         type: 'array',
-        items: { type: 'string' }
+        description: 'List of standard synthetic chemicals or fungicides with active ingredients (e.g. Mancozeb 75% WP, Chlorothalonil)',
+        items: {
+          type: 'string',
+          description: 'Chemical treatment measure'
+        }
       },
       prevention_measures: {
         type: 'array',
-        items: { type: 'string' }
+        description: 'List of cultural practices to prevent spread and recurrence (e.g. drip irrigation, crop rotation, resistant cultivars, adequate spacing)',
+        items: {
+          type: 'string',
+          description: 'Preventative cultural measure'
+        }
       }
     },
     required: [
