@@ -147,7 +147,7 @@ if (!isPthread) {
         dtype: {
           vision_encoder: "fp16",
           embed_tokens: "fp16",
-          decoder_model_merged: "q4f16",
+          decoder_model_merged: "fp16",
         },
         device: 'webgpu',
         progress_callback: progressCallback
