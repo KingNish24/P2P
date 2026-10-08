@@ -129,11 +129,15 @@ if (!isPthread) {
       }
       progressMap.set(info.file, info.loaded / info.total);
       const totalProgress = (Array.from(progressMap.values()).reduce((sum, v) => sum + v, 0) / MODEL_FILE_COUNT) * 100;
+      const loadedMB = (info.loaded / (1024 * 1024)).toFixed(1);
+      const totalMB = (info.total / (1024 * 1024)).toFixed(1);
       self.postMessage({
         type: 'progress',
         progress: {
           file: info.file,
-          progress: Math.min(100, Math.round(totalProgress))
+          progress: Math.min(100, Math.round(totalProgress)),
+          loadedMB,
+          totalMB
         }
       });
     };

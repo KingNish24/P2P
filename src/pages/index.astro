@@ -140,16 +140,16 @@ import Layout from '../layouts/Layout.astro';
 						<h2 class="text-xl sm:text-2xl font-bold tracking-tight text-[#1a1a1a]">Crop Health Analysis</h2>
 						<p class="text-xs text-neutral-400 mt-0.5">Gemini Google Gemma4 E2B vision language model running locally on-device.</p>
 					</div>
-					<div class="text-[11px] font-mono text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
-						q4f16 &middot; 450M
-					</div>
 				</div>
 
 				<!-- Progress bar container -->
 				<div id="progress-container" class="hidden p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-2 text-neutral-700">
-					<div class="flex justify-between text-xs font-mono text-neutral-600">
+					<div class="flex justify-between items-center text-xs font-mono text-neutral-600">
 						<span id="progress-file" class="break-all font-medium">Loading model weights...</span>
-						<span id="progress-percent" class="text-[#00c853] font-bold ml-2">0%</span>
+						<div class="flex items-center gap-2 ml-2 flex-shrink-0">
+							<span id="progress-mb" class="text-neutral-400 font-medium"></span>
+							<span id="progress-percent" class="text-[#00c853] font-bold">0%</span>
+						</div>
 					</div>
 					<div id="progress-bar-wrap" class="w-full h-1.5 rounded-full bg-neutral-200 overflow-hidden">
 						<div id="progress-fill" class="h-full bg-[#00c853] transition-all duration-150" style="width: 0%"></div>
@@ -173,7 +173,10 @@ import Layout from '../layouts/Layout.astro';
 							</div>
 						</div>
 
-						<img id="image-preview" class="hidden max-h-72 max-w-full rounded-xl object-contain shadow-sm" alt="Selected Crop" />
+						<div id="preview-wrapper" class="relative hidden inline-block max-h-72 max-w-full">
+							<img id="image-preview" class="max-h-72 max-w-full rounded-xl object-contain shadow-sm block" alt="Selected Crop" />
+							<canvas id="scanner-canvas" class="absolute inset-0 w-full h-full pointer-events-none rounded-xl"></canvas>
+						</div>
 					</div>
 
 					<div class="flex gap-2">
@@ -196,7 +199,7 @@ import Layout from '../layouts/Layout.astro';
 				</div>
 
 				<!-- Diagnose Button matching Ente style -->
-				<button id="btn-analyze" disabled type="button" class="w-full py-3.5 rounded-full bg-[#2d2d2d] hover:bg-[#1a1a1a] disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider shadow-md transition cursor-pointer flex items-center justify-center gap-2">
+				<button id="btn-analyze" disabled type="button" class="relative z-30 w-full py-3.5 rounded-full bg-[#2d2d2d] hover:bg-[#1a1a1a] disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider shadow-md transition cursor-pointer flex items-center justify-center gap-2">
 					<span id="btn-icon" class="flex items-center">
 						<svg class="w-4 h-4 fill-none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -437,6 +440,7 @@ import Layout from '../layouts/Layout.astro';
 
 		const progressContainer = document.getElementById('progress-container');
 		const progressFile = document.getElementById('progress-file');
+		const progressMb = document.getElementById('progress-mb');
 		const progressPercent = document.getElementById('progress-percent');
 		const progressFill = document.getElementById('progress-fill');
 		const progressBarWrap = document.getElementById('progress-bar-wrap');
@@ -444,12 +448,414 @@ import Layout from '../layouts/Layout.astro';
 		const dropzone = document.getElementById('dropzone');
 		const fileInput = document.getElementById('file-input');
 		const uploadPlaceholder = document.getElementById('upload-placeholder');
+		const previewWrapper = document.getElementById('preview-wrapper');
 		const imagePreview = document.getElementById('image-preview');
+		const scannerCanvas = document.getElementById('scanner-canvas');
 		const btnClear = document.getElementById('btn-clear');
 		const userNoteInput = document.getElementById('user-note');
 		const btnAnalyze = document.getElementById('btn-analyze');
 		const btnIcon = document.getElementById('btn-icon');
 		const btnText = document.getElementById('btn-text');
+
+		// U2NetP ONNX Salient Object Detection & Laser Scanner
+		let scannerCtx = null;
+		let activeMaskCanvas = null;
+		let activeEdgeCanvas = null;
+		let scanAnimId = null;
+		let isScanning = false;
+		let isFadingOut = false;
+		let scanFadeAlpha = 0;
+		let scanStartTime = 0;
+		let scanLayerCanvas = null;
+		let scanLayerCtx = null;
+		let dimCanvas = null;
+		let dimCtx = null;
+
+		let u2netpSession = null;
+		let u2netpPromise = null;
+
+		async function getU2NetPSession() {
+			if (u2netpSession) return u2netpSession;
+			if (u2netpPromise) return u2netpPromise;
+
+			u2netpPromise = (async () => {
+				try {
+					const ort = await import('onnxruntime-web');
+					if (ort.env && ort.env.wasm) {
+						ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
+						ort.env.wasm.numThreads = 1;
+					}
+					u2netpSession = await ort.InferenceSession.create('/models/u2netp.onnx', {
+						executionProviders: ['wasm']
+					});
+					return u2netpSession;
+				} catch (err) {
+					console.warn('U2NetP session initialization note:', err);
+					return null;
+				}
+			})();
+
+			return u2netpPromise;
+		}
+
+		// Pre-warm U2NetP model in background
+		if (typeof window !== 'undefined') {
+			if ('requestIdleCallback' in window) {
+				requestIdleCallback(() => { getU2NetPSession(); });
+			} else {
+				setTimeout(() => { getU2NetPSession(); }, 1200);
+			}
+		}
+
+		let isSegmenting = false;
+
+		async function runU2NetPSegmentation(img) {
+			if (!img || isSegmenting) return;
+			isSegmenting = true;
+			try {
+				const session = await getU2NetPSession();
+				if (!session) return;
+
+				const ort = await import('onnxruntime-web');
+
+				// Preprocessing for U2NetP: draw directly onto 320x320 prepCanvas
+				const prepCanvas = document.createElement('canvas');
+				prepCanvas.width = 320;
+				prepCanvas.height = 320;
+				const prepCtx = prepCanvas.getContext('2d', { willReadFrequently: true });
+				prepCtx.drawImage(img, 0, 0, 320, 320);
+
+				const imgData = prepCtx.getImageData(0, 0, 320, 320);
+				const rgba = imgData.data;
+
+				// Create Float32Array of length 1 * 3 * 320 * 320
+				const totalPixels = 320 * 320;
+				const floatData = new Float32Array(3 * totalPixels);
+
+				// Normalize channels:
+				// mean = [0.485, 0.456, 0.406]
+				// std = [0.229, 0.224, 0.225]
+				// red[i] = (r / 255.0 - 0.485) / 0.229
+				// green[i] = (g / 255.0 - 0.456) / 0.224
+				// blue[i] = (b / 255.0 - 0.406) / 0.225
+				for (let i = 0; i < totalPixels; i++) {
+					const p = i * 4;
+					const r = rgba[p];
+					const g = rgba[p + 1];
+					const b = rgba[p + 2];
+					floatData[i] = (r / 255.0 - 0.485) / 0.229;
+					floatData[totalPixels + i] = (g / 255.0 - 0.456) / 0.224;
+					floatData[2 * totalPixels + i] = (b / 255.0 - 0.406) / 0.225;
+				}
+
+				// Input tensor
+				const inputTensor = new ort.Tensor('float32', floatData, [1, 3, 320, 320]);
+				const feeds = {};
+				feeds[session.inputNames[0]] = inputTensor;
+				const results = await session.run(feeds);
+
+				// Extract output mask data
+				const outputTensor = results[session.outputNames[0]];
+				const outData = outputTensor.data;
+
+				// Calculate min and max of output values
+				let min = Infinity;
+				let max = -Infinity;
+				for (let i = 0; i < outData.length; i++) {
+					const v = outData[i];
+					if (v < min) min = v;
+					if (v > max) max = v;
+				}
+				const range = (max - min) || 1;
+
+				// Draw mask on 320x320 canvas, extract 1px edge boundary for edgeCanvas
+				const maskCanvas = document.createElement('canvas');
+				maskCanvas.width = 320;
+				maskCanvas.height = 320;
+				const maskCtx = maskCanvas.getContext('2d');
+				const maskImgData = maskCtx.createImageData(320, 320);
+				const mData = maskImgData.data;
+
+				const edgeCanvas = document.createElement('canvas');
+				edgeCanvas.width = 320;
+				edgeCanvas.height = 320;
+				const edgeCtx = edgeCanvas.getContext('2d');
+				const edgeImgData = edgeCtx.createImageData(320, 320);
+				const eData = edgeImgData.data;
+
+				const isForeground = new Uint8Array(totalPixels);
+				let fgCount = 0;
+
+				// Pixels with val > 0.45 are foreground subject
+				for (let i = 0; i < totalPixels; i++) {
+					const val = (outData[i] - min) / range;
+					if (val > 0.45) {
+						isForeground[i] = 1;
+						fgCount++;
+						const p = i * 4;
+						mData[p] = 255;
+						mData[p + 1] = 255;
+						mData[p + 2] = 255;
+						mData[p + 3] = 255;
+					}
+				}
+
+				const mw = 320;
+				const mh = 320;
+				for (let y = 0; y < mh; y++) {
+					for (let x = 0; x < mw; x++) {
+						const idx = y * mw + x;
+						if (isForeground[idx]) {
+							if (x === 0 || x === mw - 1 || y === 0 || y === mh - 1 ||
+								!isForeground[idx - 1] || !isForeground[idx + 1] ||
+								!isForeground[idx - mw] || !isForeground[idx + mw]) {
+								const p = idx * 4;
+								eData[p] = 0;
+								eData[p + 1] = 255;
+								eData[p + 2] = 120;
+								eData[p + 3] = 255;
+							}
+						}
+					}
+				}
+
+				maskCtx.putImageData(maskImgData, 0, 0);
+				edgeCtx.putImageData(edgeImgData, 0, 0);
+
+				if (fgCount > 50) {
+					activeMaskCanvas = maskCanvas;
+					activeEdgeCanvas = edgeCanvas;
+				}
+			} catch (err) {
+				console.warn('U2NetP segmentation note:', err);
+			} finally {
+				isSegmenting = false;
+			}
+		}
+
+		function startLaserScan() {
+			if (!imagePreview || !imagePreview.complete || !imagePreview.naturalWidth) {
+				if (imagePreview) {
+					imagePreview.onload = () => startLaserScan();
+				}
+				return;
+			}
+
+			if (!scannerCanvas) return;
+			scannerCtx = scannerCanvas.getContext('2d');
+
+			if (!activeMaskCanvas) {
+				activeMaskCanvas = null;
+				activeEdgeCanvas = null;
+			}
+
+			isScanning = true;
+			isFadingOut = false;
+			scanFadeAlpha = 0.05;
+			scanStartTime = performance.now();
+
+			if (scanAnimId) cancelAnimationFrame(scanAnimId);
+			scanAnimId = requestAnimationFrame(renderScanLoop);
+
+			// Run U2NetP Salient Object Detection if not already computed
+			if (!activeMaskCanvas) {
+				runU2NetPSegmentation(imagePreview);
+			}
+		}
+
+		function stopLaserScan(smooth = true) {
+			if (!isScanning) return;
+			if (smooth) {
+				isFadingOut = true;
+			} else {
+				isScanning = false;
+				isFadingOut = false;
+				scanFadeAlpha = 0;
+				if (scanAnimId) cancelAnimationFrame(scanAnimId);
+				scanAnimId = null;
+				if (scannerCanvas && scannerCtx) {
+					scannerCtx.clearRect(0, 0, scannerCanvas.width, scannerCanvas.height);
+				}
+			}
+		}
+
+		function renderScanLoop(now) {
+			if (!isScanning) return;
+
+			if (isFadingOut) {
+				scanFadeAlpha -= 0.05;
+				if (scanFadeAlpha <= 0) {
+					scanFadeAlpha = 0;
+					isScanning = false;
+					isFadingOut = false;
+					if (scannerCtx && scannerCanvas) {
+						scannerCtx.clearRect(0, 0, scannerCanvas.width, scannerCanvas.height);
+					}
+					return;
+				}
+			} else if (scanFadeAlpha < 1) {
+				scanFadeAlpha = Math.min(1, scanFadeAlpha + 0.08);
+			}
+
+			const w = imagePreview.clientWidth;
+			const h = imagePreview.clientHeight;
+			if (!w || !h) {
+				scanAnimId = requestAnimationFrame(renderScanLoop);
+				return;
+			}
+
+			const dpr = window.devicePixelRatio || 1;
+			const targetW = Math.round(w * dpr);
+			const targetH = Math.round(h * dpr);
+
+			if (scannerCanvas.width !== targetW || scannerCanvas.height !== targetH) {
+				scannerCanvas.width = targetW;
+				scannerCanvas.height = targetH;
+			}
+
+			if (!scanLayerCanvas) {
+				scanLayerCanvas = document.createElement('canvas');
+			}
+			if (scanLayerCanvas.width !== targetW || scanLayerCanvas.height !== targetH) {
+				scanLayerCanvas.width = targetW;
+				scanLayerCanvas.height = targetH;
+				scanLayerCtx = scanLayerCanvas.getContext('2d');
+			}
+
+			if (!dimCanvas) {
+				dimCanvas = document.createElement('canvas');
+			}
+			if (dimCanvas.width !== targetW || dimCanvas.height !== targetH) {
+				dimCanvas.width = targetW;
+				dimCanvas.height = targetH;
+				dimCtx = dimCanvas.getContext('2d');
+			}
+
+			// 1. Prepare scanLayer inside subject
+			scanLayerCtx.clearRect(0, 0, targetW, targetH);
+
+			// Holographic scan grid & glowing contours (only when activeMaskCanvas is ready)
+			if (activeMaskCanvas) {
+				const gridSize = 20 * dpr;
+				scanLayerCtx.save();
+				scanLayerCtx.strokeStyle = 'rgba(0, 200, 83, 0.14)';
+				scanLayerCtx.lineWidth = 1 * dpr;
+				scanLayerCtx.beginPath();
+				for (let x = 0; x <= targetW; x += gridSize) {
+					scanLayerCtx.moveTo(x, 0);
+					scanLayerCtx.lineTo(x, targetH);
+				}
+				for (let y = 0; y <= targetH; y += gridSize) {
+					scanLayerCtx.moveTo(0, y);
+					scanLayerCtx.lineTo(targetW, y);
+				}
+				scanLayerCtx.stroke();
+
+				scanLayerCtx.strokeStyle = 'rgba(0, 230, 118, 0.06)';
+				scanLayerCtx.beginPath();
+				for (let d = -targetH; d <= targetW; d += gridSize * 2) {
+					scanLayerCtx.moveTo(d, 0);
+					scanLayerCtx.lineTo(d + targetH, targetH);
+				}
+				scanLayerCtx.stroke();
+				scanLayerCtx.restore();
+
+				// Glowing contour lines
+				if (activeEdgeCanvas) {
+					scanLayerCtx.save();
+					scanLayerCtx.shadowColor = '#00e676';
+					scanLayerCtx.shadowBlur = 12 * dpr;
+					scanLayerCtx.globalAlpha = 0.85;
+					scanLayerCtx.drawImage(activeEdgeCanvas, 0, 0, targetW, targetH);
+					scanLayerCtx.restore();
+				}
+			}
+
+			// Laser beam sweeps vertically up and down with period ~1.8s
+			const elapsed = now - scanStartTime;
+			const period = 1800;
+			const progress = (elapsed % period) / period;
+			const normY = 0.5 - 0.5 * Math.cos(progress * 2 * Math.PI);
+			const laserY = normY * targetH;
+
+			// Bright neon green #00c853 with gradient glow
+			const beamRadius = 38 * dpr;
+			const grad = scanLayerCtx.createLinearGradient(0, laserY - beamRadius, 0, laserY + beamRadius);
+			grad.addColorStop(0, 'rgba(0, 200, 83, 0)');
+			grad.addColorStop(0.25, 'rgba(0, 200, 83, 0.15)');
+			grad.addColorStop(0.48, 'rgba(0, 230, 118, 0.6)');
+			grad.addColorStop(0.5, 'rgba(215, 255, 230, 0.95)');
+			grad.addColorStop(0.52, 'rgba(0, 230, 118, 0.6)');
+			grad.addColorStop(0.75, 'rgba(0, 200, 83, 0.15)');
+			grad.addColorStop(1, 'rgba(0, 200, 83, 0)');
+
+			scanLayerCtx.fillStyle = grad;
+			scanLayerCtx.fillRect(0, laserY - beamRadius, targetW, beamRadius * 2);
+
+			scanLayerCtx.save();
+			scanLayerCtx.shadowColor = '#00c853';
+			scanLayerCtx.shadowBlur = 14 * dpr;
+			scanLayerCtx.strokeStyle = '#00c853';
+			scanLayerCtx.lineWidth = 3.5 * dpr;
+			scanLayerCtx.beginPath();
+			scanLayerCtx.moveTo(0, laserY);
+			scanLayerCtx.lineTo(targetW, laserY);
+			scanLayerCtx.stroke();
+
+			scanLayerCtx.strokeStyle = '#ffffff';
+			scanLayerCtx.lineWidth = 1.5 * dpr;
+			scanLayerCtx.beginPath();
+			scanLayerCtx.moveTo(0, laserY);
+			scanLayerCtx.lineTo(targetW, laserY);
+			scanLayerCtx.stroke();
+			scanLayerCtx.restore();
+
+			// Clip inside segmented subject
+			if (activeMaskCanvas) {
+				scanLayerCtx.globalCompositeOperation = 'destination-in';
+				scanLayerCtx.drawImage(activeMaskCanvas, 0, 0, targetW, targetH);
+				scanLayerCtx.globalCompositeOperation = 'source-over';
+			}
+
+			// 2. Background outside mask: subtle dimming (rgba(0,0,0,0.35)) to make subject pop
+			if (activeMaskCanvas) {
+				dimCtx.clearRect(0, 0, targetW, targetH);
+				dimCtx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+				dimCtx.fillRect(0, 0, targetW, targetH);
+				dimCtx.globalCompositeOperation = 'destination-out';
+				dimCtx.drawImage(activeMaskCanvas, 0, 0, targetW, targetH);
+				dimCtx.globalCompositeOperation = 'source-over';
+			}
+
+			// 3. Render onto main canvas with fade
+			scannerCtx.clearRect(0, 0, targetW, targetH);
+			scannerCtx.save();
+			scannerCtx.globalAlpha = scanFadeAlpha;
+
+			// Outside dimming
+			if (activeMaskCanvas) {
+				scannerCtx.drawImage(dimCanvas, 0, 0);
+			}
+
+			// Inside masked subject (or full-width laser beam if mask not yet ready)
+			scannerCtx.drawImage(scanLayerCanvas, 0, 0);
+
+			// Subtle guide line on dimmed area
+			if (activeMaskCanvas) {
+				scannerCtx.save();
+				scannerCtx.strokeStyle = 'rgba(0, 200, 83, 0.22)';
+				scannerCtx.lineWidth = 1 * dpr;
+				scannerCtx.beginPath();
+				scannerCtx.moveTo(0, laserY);
+				scannerCtx.lineTo(targetW, laserY);
+				scannerCtx.stroke();
+				scannerCtx.restore();
+			}
+
+			scannerCtx.restore();
+
+			scanAnimId = requestAnimationFrame(renderScanLoop);
+		}
 
 		const reasoningSection = document.getElementById('reasoning-section');
 		const reasoningBox = document.getElementById('reasoning-box');
@@ -520,9 +926,11 @@ import Layout from '../layouts/Layout.astro';
 					if (status === 'loading') {
 						progressContainer.classList.remove('hidden');
 						progressFile.textContent = message;
+						if (progressMb) progressMb.textContent = '';
 						btnText.textContent = 'Loading Weights...';
 					} else if (status === 'ready') {
 						progressContainer.classList.add('hidden');
+						if (progressMb) progressMb.textContent = '';
 					} else if (status === 'analyzing') {
 						btnText.textContent = 'Reasoning...';
 					}
@@ -531,6 +939,9 @@ import Layout from '../layouts/Layout.astro';
 				if (type === 'progress') {
 					progressContainer.classList.remove('hidden');
 					if (progress.file) progressFile.textContent = progress.file;
+					if (progress.loadedMB && progress.totalMB && progressMb) {
+						progressMb.textContent = `${progress.loadedMB} / ${progress.totalMB} MB`;
+					}
 					if (progress.progress !== undefined) {
 						const pct = Math.round(progress.progress);
 						progressPercent.textContent = `${pct}%`;
@@ -547,6 +958,7 @@ import Layout from '../layouts/Layout.astro';
 				}
 
 				if (type === 'result') {
+					stopLaserScan(true);
 					renderResult(data);
 					btnAnalyze.disabled = false;
 					btnText.textContent = 'Diagnose Plant';
@@ -554,6 +966,7 @@ import Layout from '../layouts/Layout.astro';
 				}
 
 				if (type === 'error') {
+					stopLaserScan(true);
 					showError(message);
 				}
 			});
@@ -588,19 +1001,53 @@ import Layout from '../layouts/Layout.astro';
 			resultCard.scrollIntoView({ behavior: 'smooth' });
 		}
 
-		function setImage(dataUrl) {
-			selectedImageDataUrl = dataUrl;
-			imagePreview.src = dataUrl;
-			imagePreview.classList.remove('hidden');
+		function setImage(srcOrDataUrl) {
+			fileInput.disabled = true;
+			fileInput.classList.add('hidden', 'pointer-events-none');
+			stopLaserScan(false);
+			activeMaskCanvas = null;
+			activeEdgeCanvas = null;
+			btnAnalyze.disabled = false;
+			selectedImageDataUrl = srcOrDataUrl;
+			imagePreview.src = srcOrDataUrl;
+			previewWrapper.classList.remove('hidden');
 			uploadPlaceholder.classList.add('hidden');
 			btnClear.classList.remove('hidden');
-			btnAnalyze.disabled = false;
+
+			const onImgReady = () => {
+				if (typeof srcOrDataUrl === 'string' && !srcOrDataUrl.startsWith('data:')) {
+					try {
+						const canvas = document.createElement('canvas');
+						canvas.width = imagePreview.naturalWidth || imagePreview.width || 640;
+						canvas.height = imagePreview.naturalHeight || imagePreview.height || 480;
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(imagePreview, 0, 0, canvas.width, canvas.height);
+						selectedImageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+					} catch (e) {
+						console.warn('Could not convert image to dataURL via canvas:', e);
+					}
+				}
+
+				if ('requestIdleCallback' in window) {
+					requestIdleCallback(() => runU2NetPSegmentation(imagePreview), { timeout: 2000 });
+				} else {
+					setTimeout(() => runU2NetPSegmentation(imagePreview), 60);
+				}
+			};
+
+			imagePreview.onload = onImgReady;
+			if (imagePreview.complete) onImgReady();
 		}
 
 		function clearImage() {
+			fileInput.disabled = false;
+			fileInput.classList.remove('hidden', 'pointer-events-none');
+			stopLaserScan(false);
+			activeMaskCanvas = null;
+			activeEdgeCanvas = null;
 			selectedImageDataUrl = null;
 			imagePreview.src = '';
-			imagePreview.classList.add('hidden');
+			previewWrapper.classList.add('hidden');
 			uploadPlaceholder.classList.remove('hidden');
 			btnClear.classList.add('hidden');
 			btnAnalyze.disabled = true;
@@ -658,6 +1105,8 @@ import Layout from '../layouts/Layout.astro';
 			btnText.textContent = 'Thinking...';
 			btnIcon.innerHTML = iconSpinner;
 
+			startLaserScan();
+
 			const w = getWorker();
 			w.postMessage({
 				type: 'analyze',
@@ -705,21 +1154,11 @@ import Layout from '../layouts/Layout.astro';
 
 		// Sample Fan Button Clicks
 		document.querySelectorAll('.sample-btn').forEach((btn) => {
-			btn.addEventListener('click', async () => {
+			btn.addEventListener('click', () => {
 				const sampleUrl = btn.getAttribute('data-sample');
 				if (!sampleUrl) return;
-				try {
-					const res = await fetch(sampleUrl);
-					const blob = await res.blob();
-					const reader = new FileReader();
-					reader.onload = (e) => {
-						setImage(e.target.result);
-						document.getElementById('app')?.scrollIntoView({ behavior: 'smooth' });
-					};
-					reader.readAsDataURL(blob);
-				} catch (err) {
-					console.error('Failed to load sample image:', err);
-				}
+				setImage(sampleUrl);
+				document.getElementById('app')?.scrollIntoView({ behavior: 'smooth' });
 			});
 		});
 
