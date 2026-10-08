@@ -20,7 +20,6 @@ if (!isPthread) {
 
   let processor = null;
   let model = null;
-  let structuredProcessor = null;
 
   function dataUrlToBlob(dataUrl) {
     if (dataUrl instanceof Blob) return dataUrl;
@@ -48,7 +47,7 @@ if (!isPthread) {
       },
       crop: {
         type: 'string',
-        description: 'Identified crop or plant species, e.g. Tomato, Potato, Corn, Apple, Grape, Rice'
+        description: 'Identified crop or plant species, e.g. Tomato, Potato, Corn, Apple, Grape, Rice. Try to identify in reasoning time already yell name '
       },
       status: {
         type: 'string',
@@ -146,11 +145,6 @@ if (!isPthread) {
         progress_callback: progressCallback
       });
 
-      structuredProcessor = new StructuredOutputProcessor(processor.tokenizer, {
-        type: 'json_schema',
-        json_schema: DIAGNOSIS_SCHEMA
-      });
-
       self.postMessage({
         type: 'status',
         status: 'ready',
@@ -166,6 +160,37 @@ if (!isPthread) {
       });
       throw err;
     }
+  }
+
+  function extractJson(text) {
+    if (!text || typeof text !== 'string') {
+      throw new Error('No text received to parse JSON');
+    }
+    const clean = text.trim();
+    // 1. Direct JSON parse
+    try {
+      return JSON.parse(clean);
+    } catch (_) {}
+
+    // 2. Strip markdown fences ```json ... ```
+    const fenceMatch = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fenceMatch) {
+      try {
+        return JSON.parse(fenceMatch[1].trim());
+      } catch (_) {}
+    }
+
+    // 3. Extract substring between first '{' and last '}'
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      const jsonSub = clean.substring(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(jsonSub);
+      } catch (_) {}
+    }
+
+    throw new Error('Failed to parse structured diagnosis JSON.');
   }
 
   self.addEventListener('message', async (event) => {
@@ -196,6 +221,11 @@ if (!isPthread) {
           message: 'LFM2.5-VL reasoning over crop symptoms...'
         });
 
+        const structuredProcessor = new StructuredOutputProcessor(processor.tokenizer, {
+          type: 'json_schema',
+          json_schema: DIAGNOSIS_SCHEMA
+        });
+
         // 1. Process image
         const imageBlob = dataUrlToBlob(image);
         const rawImage = await RawImage.fromBlob(imageBlob);
@@ -203,10 +233,13 @@ if (!isPthread) {
         // 2. Assemble prompt
         const systemPrompt = `You are an expert plant pathologist and agronomist.
 Examine this crop leaf carefully.
+CRITICAL: Many leaves submitted are completely HEALTHY. If the leaf is uniform green, normal venation, and has no distinct lesions, spots, or rot, you MUST classify it as healthy: status='healthy', disease_name='Healthy Leaf', pathogen_type='none', confidence='high'.
+Only diagnose "diseased" if visible, distinct pathogen symptoms (e.g. brown/black lesions, halos, fungal sporulation, wilting) are unmistakably present.
+
 In the "reasoning" field, deduce step-by-step:
-- Leaf surface condition, lesions, spot patterns, halos, veins, or healthy color.
-- Distinguish between fungal, bacterial, viral, nutrient deficiency, or healthy tissue.
-- Conclude diagnosis and actionable evidence-based treatments.
+1. Leaf surface condition, lesions, spot patterns, halos, veins, or healthy color.
+2. Distinguish between fungal, bacterial, viral, nutrient deficiency, or healthy tissue.
+3. Conclude diagnosis and actionable evidence-based treatments.
 ${userNote ? `Farmer Note: "${userNote}"` : ''}
 Respond strictly in JSON matching the schema with reasoning as the first property.`;
 
@@ -250,20 +283,19 @@ Respond strictly in JSON matching the schema with reasoning as the first propert
           logits_processor: [structuredProcessor]
         });
 
-        const decoded = processor.tokenizer.batch_decode(output, { skip_special_tokens: true });
-        const fullText = (decoded[0] || rawTokens).trim();
+        // Slicing and JSON Parsing: prefer rawTokens from streamer (skip_prompt: true)
+        const promptLen = inputs.input_ids?.dims?.at(-1) || 0;
+        const genTokens = promptLen > 0 ? output.slice(null, [promptLen, null]) : output;
+        const decoded = processor.tokenizer.batch_decode(genTokens, { skip_special_tokens: true });
+        const decodedText = (decoded[0] || '').trim();
+        const fullText = rawTokens.trim() || decodedText;
 
         let structuredResult = null;
         try {
-          structuredResult = JSON.parse(fullText);
+          structuredResult = extractJson(fullText);
         } catch (parseErr) {
-          console.warn('Direct parse failed, trying regex match:', parseErr);
-          const match = fullText.match(/\{[\s\S]*\}/);
-          if (match) {
-            structuredResult = JSON.parse(match[0]);
-          } else {
-            throw new Error('Failed to parse structured diagnosis JSON.');
-          }
+          console.error('JSON parsing failed:', parseErr, 'Raw output was:', fullText);
+          throw parseErr;
         }
 
         self.postMessage({
