@@ -15,7 +15,7 @@ if (!isPthread) {
   env.backends.onnx.wasm.numThreads = 1;
   env.backends.onnx.wasm.proxy = false;
 
-  const MODEL_ID = 'onnx-community/LFM2.5-VL-450M-ONNX';
+  const MODEL_ID = 'onnx-community/Qwen3.5-0.8B-ONNX-OPT';
   const DTYPE = 'q4f16';
 
   let processor = null;
@@ -43,7 +43,7 @@ if (!isPthread) {
     properties: {
       reasoning: {
         type: 'string',
-        description: 'Step-by-step visual reasoning in detail in ASD STE100 format before reaching diagnosis. Even think about fixes and remedies too along with preventions if any disesase is present. ALso, try to identify the disease if present while thinking. Think hard.'
+        description: 'Step-by-step visual reasoning in detail in ASD STE100 format before reaching diagnosis. Even think about fixes and remedies too along with preventions if any disesase is present. ALso, try to identify the disease but do not try to force identify it as sometimes plant can be healthy if present while thinking. Think hard.'
       },
       crop: {
         type: 'string',
@@ -145,8 +145,8 @@ if (!isPthread) {
 
       model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
         dtype: {
-          vision_encoder: 'fp16',
-          embed_tokens: 'fp16',
+          vision_encoder: 'q4f16',
+          embed_tokens: 'q4f16',
           decoder_model_merged: 'q4f16'
         },
         device: 'webgpu',
