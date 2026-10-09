@@ -103,6 +103,17 @@ function parseTensorProto(buf) {
       else t.ints.push(v);
     } else if (f === 8) t.name = utf8.decode(v);
     else if (f === 9) t.raw = v;
+    else if (f === 13 && wt === 2) {
+      // external_data: StringStringEntryProto {key=1, value=2}
+      let k = "";
+      let val = "";
+      readMessage(v, (ef, ewt, ev) => {
+        if (ef === 1) k = utf8.decode(ev);
+        else if (ef === 2) val = utf8.decode(ev);
+      });
+      t.external = t.external || {};
+      t.external[k] = val;
+    }
   });
   return t;
 }

@@ -11,6 +11,8 @@ import * as ort from 'onnxruntime-web/webgpu';
 import { StructuredOutputProcessor } from '@huggingface/transformers-structured-output';
 import { getKernel } from '@huggingface/kernels';
 import { initMegaKernel } from './megakernel-client.js';
+import { createLfmEngine, requestLfmDevice, MAX_NEW_TOKENS } from './lfm-engine/engine.js';
+import { blobSource } from './lfm-engine/weights.js';
 
 // Guard against Emscripten pthread sub-worker re-initialization
 const isPthread = typeof self !== 'undefined' && self.name?.startsWith('em-pthread');
@@ -37,6 +39,7 @@ if (!isPthread) {
 
   let processor = null;
   let imageTokenId = null;
+  let cachedEngine = null;
 
   function modelFileUrl(file) {
     const host = env.remoteHost.endsWith('/') ? env.remoteHost : env.remoteHost + '/';
@@ -78,6 +81,20 @@ if (!isPthread) {
       }
     }
     return bytes;
+  }
+
+  // Same cache as fetchModelFile, but returns a disk-backed Blob (no full copy in RAM).
+  // The custom decoder engine slices tensors out of it one by one.
+  async function getModelBlob(file) {
+    const url = modelFileUrl(file);
+    const cache = typeof caches !== 'undefined' ? await caches.open(env.cacheKey || 'transformers-cache') : null;
+    let res = cache ? await cache.match(url) : null;
+    if (!res) {
+      const bytes = await fetchModelFile(file);
+      res = cache ? await cache.match(url) : null;
+      if (!res) return new Blob([bytes]);
+    }
+    return res.blob();
   }
 
   async function createStageSession(files, onProgress) {
@@ -481,6 +498,53 @@ if (!isPthread) {
     };
   }
 
+  // Stage 2 (custom engine): full-WebGPU f16 decoder. The JSON-schema logits processor needs the
+  // logits on the CPU for every token, so generation runs in constrained (pickToken) mode.
+  async function runEngineStage(inputsEmbeds, inputs, structuredProcessor, streamer, data = {}) {
+    const d = inputsEmbeds.data;
+    const embeds = d instanceof Float32Array || d instanceof Uint16Array ? d : Float32Array.from(d);
+    const M = inputsEmbeds.dims.at(-2);
+    const promptIds = Array.from(inputs.input_ids.data, Number);
+    const stageT0 = performance.now();
+
+    if (!cachedEngine) {
+      const [decGraph, decBlob, embGraph, embBlob] = await Promise.all([
+        getModelBlob(DECODER_FILES[0]).then((b) => b.arrayBuffer()),
+        getModelBlob(DECODER_FILES[1]),
+        getModelBlob(EMBED_FILES[0]).then((b) => b.arrayBuffer()),
+        getModelBlob(EMBED_FILES[1])
+      ]);
+      const device = await requestLfmDevice();
+      cachedEngine = await createLfmEngine({
+        device,
+        decoder: { graphBytes: new Uint8Array(decGraph), source: blobSource(decBlob) },
+        embed: { graphBytes: new Uint8Array(embGraph), source: blobSource(embBlob) }
+      });
+    }
+    const engine = cachedEngine;
+    try {
+      streamer.put([promptIds.map(BigInt)]); // first put = prompt, skipped by the streamer
+      const result = await engine.generate({
+        embeds,
+        M,
+        maxNew: MAX_NEW_TOKENS,
+        eos: [7],
+        pickToken: (logits, generated) => {
+          structuredProcessor([promptIds.concat(generated)], { data: logits, dims: [1, logits.length] });
+          let best = 0;
+          for (let i = 1; i < logits.length; i++) if (logits[i] > logits[best]) best = i;
+          return best;
+        },
+        onToken: (id) => streamer.put([[BigInt(id)]])
+      });
+      streamer.end();
+      console.log('[ai-worker] engine', result.reason, `${result.tokens.length} tokens`, `total ${(performance.now() - stageT0).toFixed(0)} ms (incl. engine init)`, `ttft ${result.ttftMs.toFixed(0)} ms`, `${result.tokensPerSec.toFixed(1)} tok/s`, `gpu+readback ${result.waitMs.toFixed(0)} ms`, `cpu pick ${result.pickMs.toFixed(0)} ms`, `from click ${(performance.now() - (data.clickTimestamp || stageT0)).toFixed(0)} ms`, engine.stats);
+      return processor.tokenizer.decode(result.tokens, { skip_special_tokens: true });
+    } finally {
+      // Do NOT destroy engine or device; keep resident across requests
+    }
+  }
+
   self.addEventListener('message', async (event) => {
     if (!event.data || typeof event.data !== 'object') return;
     const { type, data } = event.data;
@@ -544,10 +608,12 @@ Reasoning must be the first property.`;
         const inputs = await processor(rawImage, promptText, { add_special_tokens: false });
 
         let rawTokens = '';
-        const streamer = new TextStreamer(processor.tokenizer, {
+        let firstTokenAt = 0;
+        const makeStreamer = () => new TextStreamer(processor.tokenizer, {
           skip_prompt: true,
           skip_special_tokens: true,
           callback_function: (token) => {
+            if (!firstTokenAt) firstTokenAt = performance.now();
             rawTokens += token;
             self.postMessage({
               type: 'token',
@@ -556,6 +622,7 @@ Reasoning must be the first property.`;
             });
           }
         });
+        const streamer = makeStreamer();
 
         self.postMessage({
           type: 'status',
@@ -567,36 +634,72 @@ Reasoning must be the first property.`;
         self.postMessage({
           type: 'status',
           status: 'analyzing',
-          message: 'Stage 2/2: loading text decoder and generating...'
+          message: 'Stage 2/2: loading text decoder (custom WebGPU engine) and generating...'
         });
 
-        let output;
-        let textModel = null;
+        let decodedText = '';
+        let engineOk = false;
+        const forceTransformers = data.decoder === 'transformers';
         try {
-          textModel = await Lfm2ForCausalLM.from_pretrained(MODEL_ID, {
-            dtype: { embed_tokens: DTYPE, decoder_model_merged: DTYPE },
-            device: 'webgpu'
+          if (forceTransformers) throw new Error('decoder=transformers requested (A/B test)');
+          decodedText = (await runEngineStage(inputsEmbeds, inputs, structuredProcessor, streamer, data) || '').trim();
+          engineOk = true;
+        } catch (engineErr) {
+          console.warn('[ai-worker] Custom engine failed, falling back to transformers.js decoder:', engineErr);
+          rawTokens = '';
+          self.postMessage({
+            type: 'status',
+            status: 'analyzing',
+            message: 'Custom engine unavailable, using fallback decoder...'
           });
-          injectInputsEmbeds(textModel, inputsEmbeds, inputs);
-
-          output = await textModel.generate({
-            input_ids: inputs.input_ids,
-            attention_mask: inputs.attention_mask,
-            max_new_tokens: 4096,
-            do_sample: false,
-            streamer: streamer,
-            logits_processor: [structuredProcessor]
-          });
-        } finally {
-          // Free the decoder GPU memory before the next analysis
-          if (textModel) await textModel.dispose();
         }
 
-        // Slicing and JSON Parsing: prefer rawTokens from streamer (skip_prompt: true)
-        const promptLen = inputs.input_ids?.dims?.at(-1) || 0;
-        const genTokens = promptLen > 0 ? output.slice(null, [promptLen, null]) : output;
-        const decoded = processor.batch_decode(genTokens, { skip_special_tokens: true });
-        const decodedText = (decoded[0] || '').trim();
+        if (!engineOk) {
+          // Fresh constraint state + streamer: the failed attempt may have advanced both.
+          const fbProcessor = new StructuredOutputProcessor(processor.tokenizer, {
+            type: 'json_schema',
+            json_schema: DIAGNOSIS_SCHEMA
+          });
+          const fbStreamer = makeStreamer();
+          const fbT0 = performance.now();
+          let genT0 = fbT0;
+          let output;
+          let textModel = null;
+          try {
+            textModel = await Lfm2ForCausalLM.from_pretrained(MODEL_ID, {
+              dtype: { embed_tokens: DTYPE, decoder_model_merged: DTYPE },
+              device: 'webgpu'
+            });
+            injectInputsEmbeds(textModel, inputsEmbeds, inputs);
+            genT0 = performance.now();
+            firstTokenAt = 0;
+
+            output = await textModel.generate({
+              input_ids: inputs.input_ids,
+              attention_mask: inputs.attention_mask,
+              max_new_tokens: MAX_NEW_TOKENS,
+              do_sample: false,
+              streamer: fbStreamer,
+              logits_processor: [fbProcessor]
+            });
+          } finally {
+            // Free the decoder GPU memory before the next analysis
+            if (textModel) await textModel.dispose();
+          }
+
+          // Slicing and JSON Parsing: prefer rawTokens from streamer (skip_prompt: true)
+          const promptLen = inputs.input_ids?.dims?.at(-1) || 0;
+          const genTokens = promptLen > 0 ? output.slice(null, [promptLen, null]) : output;
+          const decoded = processor.batch_decode(genTokens, { skip_special_tokens: true });
+          decodedText = (decoded[0] || '').trim();
+          {
+            const n = genTokens.dims?.at(-1) || 0;
+            const end = performance.now();
+            const ttft = (firstTokenAt || end) - genT0;
+            const decMs = Math.max(1, end - (firstTokenAt || genT0));
+            console.log('[ai-worker] transformers.js decoder', `${n} tokens`, `total ${(end - fbT0).toFixed(0)} ms`, `load ${(genT0 - fbT0).toFixed(0)} ms`, `ttft ${ttft.toFixed(0)} ms (text-chunk granularity)`, `decode ${(((n - 1) / decMs) * 1000).toFixed(1)} tok/s`);
+          }
+        }
         const fullText = rawTokens.trim() || decodedText;
 
         let structuredResult = null;

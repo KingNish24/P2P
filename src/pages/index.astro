@@ -430,6 +430,7 @@ import Layout from '../layouts/Layout.astro';
 		let selectedImageDataUrl = null;
 		let cameraStream = null;
 		let tokenCount = 0;
+		let lastClickTimestamp = 0;
 
 		const iconBolt = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`;
 		const iconSpinner = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>`;
@@ -888,6 +889,13 @@ import Layout from '../layouts/Layout.astro';
 					btnAnalyze.disabled = false;
 					btnText.textContent = 'Diagnose Plant';
 					btnIcon.innerHTML = iconBolt;
+
+					const clickTimestamp = lastClickTimestamp;
+					const totalFromClick = ((performance.now() - clickTimestamp) / 1000).toFixed(2);
+					console.log(`[P2P] Total time from button click: ${totalFromClick}s`);
+					if (tokenCounter) {
+						tokenCounter.textContent = `${tokenCount} tokens (${totalFromClick}s)`;
+					}
 				}
 
 				if (type === 'error') {
@@ -1025,6 +1033,9 @@ import Layout from '../layouts/Layout.astro';
 		btnAnalyze.addEventListener('click', () => {
 			if (!selectedImageDataUrl) return;
 
+			const clickTimestamp = performance.now();
+			lastClickTimestamp = clickTimestamp;
+
 			tokenCount = 0;
 			tokenCounter.textContent = '0 tokens';
 			reasoningSection.classList.remove('hidden');
@@ -1041,7 +1052,9 @@ import Layout from '../layouts/Layout.astro';
 				type: 'analyze',
 				data: {
 					image: selectedImageDataUrl,
-					userNote: userNoteInput.value.trim()
+					userNote: userNoteInput.value.trim(),
+					decoder: new URLSearchParams(location.search).get('decoder') || 'custom',
+					clickTimestamp
 				}
 			});
 		});
