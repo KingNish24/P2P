@@ -4,17 +4,26 @@
 let sessionPromise = null;
 let ortModule = null;
 
+const SIZE = 320;
+const TOTAL_PIXELS = SIZE * SIZE;
+// Reused across jobs (input tensor data never leaves the worker)
+const floatData = new Float32Array(3 * TOTAL_PIXELS);
+
 async function getSession() {
   if (!sessionPromise) {
     sessionPromise = (async () => {
-      const ort = await import("onnxruntime-web");
+      if (!self.navigator || !self.navigator.gpu) {
+        throw new Error("WebGPU is not supported by your browser or graphics hardware.");
+      }
+      // WebGPU-only: the webgpu bundle still needs its JSEP runtime files (large .wasm), served from CDN
+      const ort = await import("onnxruntime-web/webgpu");
       if (ort.env && ort.env.wasm) {
         ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/";
-        ort.env.wasm.numThreads = 1;
       }
       ortModule = ort;
+      // u2netp.onnx is fp16 (fp32 input/output); no WASM fallback
       return ort.InferenceSession.create("/models/u2netp.onnx", {
-        executionProviders: ["wasm"]
+        executionProviders: ["webgpu"]
       });
     })().catch((err) => {
       sessionPromise = null;
@@ -29,8 +38,7 @@ async function runSegment(id, rgbaBuffer) {
   const ort = ortModule;
 
   const rgba = new Uint8ClampedArray(rgbaBuffer);
-  const totalPixels = 320 * 320;
-  const floatData = new Float32Array(3 * totalPixels);
+  const totalPixels = TOTAL_PIXELS;
 
   // Normalize channels:
   // mean = [0.485, 0.456, 0.406]
@@ -45,7 +53,7 @@ async function runSegment(id, rgbaBuffer) {
     floatData[2 * totalPixels + i] = (b / 255.0 - 0.406) / 0.225;
   }
 
-  const inputTensor = new ort.Tensor("float32", floatData, [1, 3, 320, 320]);
+  const inputTensor = new ort.Tensor("float32", floatData, [1, 3, SIZE, SIZE]);
   const feeds = {};
   feeds[session.inputNames[0]] = inputTensor;
   const results = await session.run(feeds);
@@ -62,44 +70,40 @@ async function runSegment(id, rgbaBuffer) {
     if (v > max) max = v;
   }
   const range = (max - min) || 1;
+  // (v - min) / range > 0.45  <=>  v > min + 0.45 * range
+  const thr = min + 0.45 * range;
 
   const mask = new Uint8ClampedArray(totalPixels * 4);
   const edge = new Uint8ClampedArray(totalPixels * 4);
-  const isForeground = new Uint8Array(totalPixels);
   let fgCount = 0;
 
-  // Pixels with val > 0.45 are foreground subject
-  for (let i = 0; i < totalPixels; i++) {
-    const val = (outData[i] - min) / range;
-    if (val > 0.45) {
-      isForeground[i] = 1;
+  // Single pass: foreground pixels get a mask pixel; foreground pixels on the
+  // image border or touching a background pixel also get an edge pixel.
+  const mw = SIZE;
+  const mh = SIZE;
+  for (let y = 0; y < mh; y++) {
+    const row = y * mw;
+    for (let x = 0; x < mw; x++) {
+      const idx = row + x;
+      if (outData[idx] <= thr) continue;
       fgCount++;
-      const p = i * 4;
+      const p = idx * 4;
       mask[p] = 255;
       mask[p + 1] = 255;
       mask[p + 2] = 255;
       mask[p + 3] = 255;
-    }
-  }
-
-  const mw = 320;
-  const mh = 320;
-  for (let y = 0; y < mh; y++) {
-    for (let x = 0; x < mw; x++) {
-      const idx = y * mw + x;
-      if (isForeground[idx]) {
-        if (x === 0 || x === mw - 1 || y === 0 || y === mh - 1 ||
-          !isForeground[idx - 1] || !isForeground[idx + 1] ||
-          !isForeground[idx - mw] || !isForeground[idx + mw]) {
-          const p = idx * 4;
-          edge[p] = 0;
-          edge[p + 1] = 255;
-          edge[p + 2] = 120;
-          edge[p + 3] = 255;
-        }
+      if (x === 0 || x === mw - 1 || y === 0 || y === mh - 1 ||
+        outData[idx - 1] <= thr || outData[idx + 1] <= thr ||
+        outData[idx - mw] <= thr || outData[idx + mw] <= thr) {
+        edge[p] = 0;
+        edge[p + 1] = 255;
+        edge[p + 2] = 120;
+        edge[p + 3] = 255;
       }
     }
   }
+
+  if (typeof outputTensor.dispose === "function") outputTensor.dispose();
 
   self.postMessage(
     { type: "mask", id, mask: mask.buffer, edge: edge.buffer, fgCount },
