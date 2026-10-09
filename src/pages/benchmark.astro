@@ -1,5 +1,8 @@
 ---
 // src/pages/benchmark.astro
+// u2netp segmentation benchmark, four implementations on the same input:
+//   A  ORT WebGPU (previous implementation): fp16 model, JS pre/post
+//   C  custom full-WebGPU WGSL engine (src/scripts/seg-engine): GPU pre/post, single pass, tiled-GEMM conv
 ---
 
 <!DOCTYPE html>
@@ -7,445 +10,363 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Real WebGPU Benchmarks: LFM2.5 TTFT & TPS + Segmentation</title>
+  <title>u2netp Segmentation Benchmark: ORT vs custom WebGPU engine</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; line-height: 1.5; }
-    .container { max-width: 960px; margin: 0 auto; }
-    h1 { font-size: 26px; font-weight: 800; color: #38bdf8; margin-bottom: 6px; }
-    p.sub { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
-    .btn { background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-    .btn:hover { background: #1d4ed8; }
-    .btn:disabled { background: #475569; cursor: not-allowed; }
-    .btn-green { background: #059669; }
-    .btn-green:hover { background: #047857; }
-    .btn-purple { background: #7c3aed; }
-    .btn-purple:hover { background: #6d28d9; }
-    .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-    .status { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; color: #a5f3fc; background: #082f49; padding: 12px; border-radius: 8px; min-height: 40px; max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; margin: 12px 0; border: 1px solid #0284c7; }
-    .stream-box { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; color: #f8fafc; background: #020617; padding: 14px; border-radius: 8px; min-height: 60px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #1e293b; line-height: 1.6; }
-    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
-    th, td { border: 1px solid #334155; padding: 10px 12px; text-align: left; }
-    th { background: #0f172a; color: #38bdf8; font-weight: 700; }
-    tr:nth-child(even) { background: #182234; }
-    .val-highlight { color: #4ade80; font-weight: 700; }
-    .val-speed { color: #38bdf8; font-weight: 700; }
-    .badge { font-family: monospace; font-size: 11px; padding: 3px 8px; border-radius: 9999px; }
-    .badge-gpu { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
-    .images-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
-    .img-card { text-align: center; background: #0f172a; padding: 6px; border-radius: 8px; border: 1px solid #334155; }
-    .img-card img { width: 100%; height: 75px; object-fit: cover; border-radius: 6px; }
-    .img-card span { font-size: 11px; font-weight: 600; color: #94a3b8; margin-top: 4px; display: block; }
+    body { font-family: ui-sans-serif, system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; line-height: 1.5; }
+    .container { max-width: 1240px; margin: 0 auto; }
+    h1 { font-size: 24px; color: #38bdf8; margin: 0 0 4px; }
+    h2 { font-size: 16px; color: #e2e8f0; margin: 0 0 12px; }
+    p.sub { color: #94a3b8; font-size: 13px; margin: 0 0 20px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+    .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+    label { font-size: 12px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px; }
+    input, select { background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 7px 9px; font-size: 13px; }
+    input[type=number] { width: 80px; }
+    button { background: #2563eb; color: #fff; border: 0; padding: 9px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    button.alt { background: #334155; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #334155; vertical-align: top; }
+    th { color: #94a3b8; font-weight: 600; }
+    td.num { font-family: ui-monospace, Consolas, monospace; }
+    .win { color: #4ade80; }
+    .lose { color: #f87171; }
+    .bar { height: 8px; border-radius: 4px; margin-top: 4px; }
+    .c-A { background: #f59e0b; } .c-C { background: #a78bfa; }
+    .log { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 10px; height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+    .err { color: #f87171; }
+    .imgs { display: flex; gap: 10px; flex-wrap: wrap; }
+    .imgs canvas { width: 160px; height: 160px; border-radius: 8px; background: #000; border: 1px solid #334155; }
+    .imgs figcaption { font-size: 11px; color: #94a3b8; text-align: center; }
+    .imgs figure { margin: 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-      <div>
-        <h1>Real Empirical WebGPU Benchmarks</h1>
-        <p class="sub">100% Real Live Model Measurements — No Mock or Estimated Data</p>
-      </div>
-      <div id="gpuStatus" class="badge badge-gpu">Checking WebGPU...</div>
-    </div>
+    <h1>u2netp Segmentation Benchmark</h1>
+    <p class="sub">A = ORT WebGPU (previous, fp16 model, JS pre/post) &nbsp;|&nbsp; C = custom full-WebGPU engine (GPU pre/post, no ORT, now used by the app)</p>
 
-    <!-- SECTION 1: LFM2.5 REAL TTFT & TPS -->
-    <div class="card" style="border-color: #0284c7;">
-      <h2 style="font-size: 18px; font-weight: 700; color: #38bdf8; margin: 0 0 6px 0;">
-        1. LFM2.5 Vision-Language (450M) — Real Live TTFT & TPS
-      </h2>
-      <p style="color: #94a3b8; font-size: 13px; margin: 0 0 14px 0;">
-        Runs live <code style="color: #cbd5e1;">onnx-community/LFM2.5-VL-450M-ONNX</code> on sample <code style="color: #cbd5e1;">tomato.jpg</code>. Real token-by-token streamer records exact stopwatch timestamps for Token #1 (TTFT) and decode speed (TPS).
-      </p>
-
-      <div class="btn-group">
-        <button id="btnRunNoMega" class="btn">Run 1: Pure WebGPU (No Kernels)</button>
-        <button id="btnRunMega" class="btn btn-green">Run 2: WebGPU + MegaKernel (19 Ops)</button>
-        <button id="btnRunBoth" class="btn btn-purple">Run Both & Compare</button>
-      </div>
-
-      <div id="lfmStatus" class="status">Click a button above to run real generation benchmark...</div>
-
-      <div style="margin-top: 12px;">
-        <label style="font-size: 12px; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 4px;">Live Streamed Tokens:</label>
-        <div id="lfmStreamBox" class="stream-box">(Generated reasoning tokens will stream live here...)</div>
-      </div>
-
-      <div id="lfmTableWrap" style="display: none; margin-top: 16px;">
-        <h3 style="font-size: 15px; color: #f1f5f9; margin-bottom: 8px;">Real Measured Generation Metrics</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Benchmark Run</th>
-              <th>Model Init</th>
-              <th>Real TTFT (Token #1)</th>
-              <th>Tokens Counted</th>
-              <th>Decode Time</th>
-              <th>Real Decode TPS</th>
-            </tr>
-          </thead>
-          <tbody id="lfmTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- SECTION 2: SEGMENTATION & CORE CONV -->
     <div class="card">
-      <h2 style="font-size: 18px; font-weight: 700; color: #cbd5e1; margin: 0 0 6px 0;">
-        2. Segmentation Model (u2netp.onnx) & Conv Kernels
-      </h2>
-      <p style="color: #94a3b8; font-size: 13px; margin: 0 0 14px 0;">
-        Compares WASM CPU vs WebGPU vs HF WebGPU Conv kernel on the 4 sample assets.
-      </p>
-
-      <button id="btnRunSeg" class="btn">Run Segmentation Benchmark (4 Images)</button>
-
-      <div class="images-grid">
-        <div class="img-card"><img src="/samples/tomato.jpg" alt="Tomato" /><span>tomato.jpg</span></div>
-        <div class="img-card"><img src="/samples/corn.jpg" alt="Corn" /><span>corn.jpg</span></div>
-        <div class="img-card"><img src="/samples/spinach.jpg" alt="Spinach" /><span>spinach.jpg</span></div>
-        <div class="img-card"><img src="/samples/potato.jpg" alt="Potato" /><span>potato.jpg</span></div>
+      <div class="row">
+        <label>Sample
+          <select id="sample">
+            <option>corn</option><option>grape</option><option>potato</option><option>spinach</option><option>tomato</option>
+          </select>
+        </label>
+        <label>Warmup <input id="warmup" type="number" value="3" min="0" max="50" /></label>
+        <label>Runs (N) <input id="runs" type="number" value="20" min="1" max="500" /></label>
+        <label>Engine C precision
+          <select id="prec"><option value="auto">auto (f16 if available)</option><option value="f16">f16</option><option value="f32">f32</option></select>
+        </label>
+        <button id="run">Run benchmark</button>
+        <button id="export" class="alt" disabled>Export JSON</button>
       </div>
+      <p class="sub" style="margin:10px 0 0">"x" in the table is the speed-up vs A (higher = faster).</p>
+    </div>
 
-      <div id="segStatus" class="status" style="display: none;"></div>
+    <div class="card">
+      <h2>Results</h2>
+      <table id="results">
+        <thead><tr><th>Metric</th><th>A: ORT</th><th>C: custom engine</th></tr></thead>
+        <tbody><tr><td colspan="3" style="color:#64748b">No run yet.</td></tr></tbody>
+      </table>
+    </div>
 
-      <div id="segTableWrap" style="display: none;">
-        <h3 style="font-size: 15px; color: #f1f5f9; margin: 16px 0 8px 0;">u2netp.onnx Full Model Latency (ms)</h3>
-        <table>
-          <thead>
-            <tr><th>Sample Image</th><th>WASM CPU</th><th>WebGPU (ORT)</th><th>Status</th></tr>
-          </thead>
-          <tbody id="segTableBody"></tbody>
-        </table>
+    <div class="card" id="kcard" style="display:none">
+      <h2>Engine C: GPU time per kernel type (one profiled run)</h2>
+      <table id="kernels"><thead><tr><th>Type</th><th>Dispatches</th><th>ms</th><th>Share</th></tr></thead><tbody></tbody></table>
+      <p class="sub" id="knote" style="margin-top:10px"></p>
+    </div>
 
-        <h3 style="font-size: 15px; color: #f1f5f9; margin: 20px 0 8px 0;">Core Conv Operator (320x320) Latency (ms)</h3>
-        <table>
-          <thead>
-            <tr><th>Sample Image</th><th>1. WASM CPU</th><th>2. HF WebGPU Conv Kernel</th><th>Speedup</th></tr>
-          </thead>
-          <tbody id="convTableBody"></tbody>
-        </table>
+    <div class="card">
+      <h2>Outputs</h2>
+      <div class="imgs">
+        <figure><canvas id="cIn" width="320" height="320"></canvas><figcaption>input 320x320</figcaption></figure>
+        <figure><canvas id="mA" width="320" height="320"></canvas><figcaption>A mask</figcaption></figure>
+        <figure><canvas id="mC" width="320" height="320"></canvas><figcaption>C mask</figcaption></figure>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Log</h2>
+      <div class="log" id="log"></div>
     </div>
   </div>
 
   <script>
-    import {
-      AutoProcessor,
-      AutoModelForImageTextToText,
-      RawImage,
-      TextStreamer,
-      env
-    } from "@huggingface/transformers";
-    import { getKernel } from "@huggingface/kernels";
-    import { initMegaKernel } from "../scripts/megakernel-client.js";
+    import { createSegEngine } from "../scripts/seg-engine/engine.js";
 
-    // Setup HF proxy when on Cloudflare/external host
-    if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-      env.remoteHost = window.location.origin + "/hf";
+    const SIZE = 320, N = SIZE * SIZE;
+    const IDS = ["A", "C"];
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+    let lastReport = null;
+
+    function log(msg, isErr) {
+      const line = document.createElement("div");
+      if (isErr) line.className = "err";
+      line.textContent = `[${(performance.now() / 1000).toFixed(2)}s] ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      (isErr ? console.error : console.log)(msg);
     }
-    env.allowLocalModels = false;
+    window.addEventListener("error", (e) => log(`window error: ${e.message}`, true));
+    window.addEventListener("unhandledrejection", (e) => log(`unhandled rejection: ${(e.reason && e.reason.stack) || e.reason}`, true));
 
-    const gpuStatus = document.getElementById("gpuStatus");
-    const lfmStatus = document.getElementById("lfmStatus");
-    const lfmStreamBox = document.getElementById("lfmStreamBox");
-    const lfmTableWrap = document.getElementById("lfmTableWrap");
-    const lfmTableBody = document.getElementById("lfmTableBody");
-
-    const btnRunNoMega = document.getElementById("btnRunNoMega");
-    const btnRunMega = document.getElementById("btnRunMega");
-    const btnRunBoth = document.getElementById("btnRunBoth");
-
-    const btnRunSeg = document.getElementById("btnRunSeg");
-    const segStatus = document.getElementById("segStatus");
-    const segTableWrap = document.getElementById("segTableWrap");
-    const segTableBody = document.getElementById("segTableBody");
-    const convTableBody = document.getElementById("convTableBody");
-
-    // Check WebGPU availability
-    if (navigator.gpu) {
-      navigator.gpu.requestAdapter().then(adapter => {
-        if (adapter) {
-          gpuStatus.textContent = "WebGPU: Ready (" + (adapter.info?.architecture || "Hardware GPU") + ")";
-        } else {
-          gpuStatus.textContent = "WebGPU: No Adapter";
-          gpuStatus.style.borderColor = "#f87171";
-          gpuStatus.style.color = "#f87171";
-        }
-      });
-    } else {
-      gpuStatus.textContent = "WebGPU: Not Supported";
-      gpuStatus.style.borderColor = "#f87171";
-      gpuStatus.style.color = "#f87171";
-    }
-
-    function logLfm(msg) {
-      lfmStatus.textContent += msg + "\n";
-      lfmStatus.scrollTop = lfmStatus.scrollHeight;
-      console.log(msg);
-    }
-
-    function disableAll(disabled) {
-      btnRunNoMega.disabled = disabled;
-      btnRunMega.disabled = disabled;
-      btnRunBoth.disabled = disabled;
-      btnRunSeg.disabled = disabled;
-    }
-
-    // Benchmark storage
-    const liveResults = {
-      noMega: null,
-      mega: null
+    const stats = (xs) => {
+      const s = [...xs].sort((a, b) => a - b);
+      const q = (p) => s[Math.min(s.length - 1, Math.floor(p * (s.length - 1) + 0.5))];
+      return { median: q(0.5), mean: s.reduce((a, b) => a + b, 0) / s.length, p95: q(0.95), min: s[0], max: s[s.length - 1] };
     };
+    const fmt = (v, d = 2) => (v == null || Number.isNaN(v) ? "-" : v.toFixed(d));
+    const mb = (b) => (b == null ? "n/a" : (b / 1048576).toFixed(2) + " MB");
 
-    /**
-     * Executes real token generation on LFM2.5-VL-450M-ONNX
-     */
-    async function runRealLfmBenchmark(mode) {
-      disableAll(true);
-      lfmTableWrap.style.display = "block";
-      lfmStreamBox.textContent = "";
-      lfmStatus.textContent = "";
+    async function loadRgba(name) {
+      const img = new Image();
+      img.src = `/samples/${name}.jpg`;
+      await img.decode();
+      const c = document.createElement("canvas");
+      c.width = c.height = SIZE;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, SIZE, SIZE);
+      return ctx.getImageData(0, 0, SIZE, SIZE).data;
+    }
 
-      const useMega = mode === "mega";
-      const modeLabel = useMega ? "WebGPU + MegaKernel (19 Ops)" : "Pure WebGPU (No Kernels)";
-      logLfm(`[${modeLabel}] Starting 100% Real Live Benchmark...`);
-
-      if (useMega) {
-        logLfm("Loading MegaKernel in-memory bundle...");
-        const t0_mk = performance.now();
-        await initMegaKernel();
-        logLfm(`✅ MegaKernel ready in ${(performance.now() - t0_mk).toFixed(1)} ms!`);
+    // JS pre/post shared by A and D (same code as segment-worker.js)
+    const floatData = new Float32Array(3 * N);
+    function normalize(rgba) {
+      for (let i = 0; i < N; i++) {
+        const p = i * 4;
+        floatData[i] = (rgba[p] / 255 - 0.485) / 0.229;
+        floatData[N + i] = (rgba[p + 1] / 255 - 0.456) / 0.224;
+        floatData[2 * N + i] = (rgba[p + 2] / 255 - 0.406) / 0.225;
       }
+      return floatData;
+    }
+    function post(outData) {
+      let min = Infinity, max = -Infinity;
+      for (let i = 0; i < outData.length; i++) { const v = outData[i]; if (v < min) min = v; if (v > max) max = v; }
+      const thr = min + 0.45 * ((max - min) || 1);
+      const mask = new Uint8ClampedArray(N * 4);
+      const edge = new Uint8ClampedArray(N * 4);
+      let fg = 0;
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          const idx = y * SIZE + x;
+          if (outData[idx] <= thr) continue;
+          fg++;
+          const p = idx * 4;
+          mask[p] = mask[p + 1] = mask[p + 2] = mask[p + 3] = 255;
+          if (x === 0 || x === SIZE - 1 || y === 0 || y === SIZE - 1 ||
+            outData[idx - 1] <= thr || outData[idx + 1] <= thr || outData[idx - SIZE] <= thr || outData[idx + SIZE] <= thr) {
+            edge[p + 1] = 255; edge[p + 2] = 120; edge[p + 3] = 255;
+          }
+        }
+      }
+      return { mask, edge, fgCount: fg };
+    }
 
+    // ---------------------------------------------------------------- engines
+    // Common shape: { model(rgba) -> Promise, e2e(rgba) -> {mask,edge,fgCount}, output(rgba) -> Float32Array, stats, destroy }
+    async function createA(modelBytes) {
+      const ort = await import("onnxruntime-web/webgpu");
+      ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/";
+      const session = await ort.InferenceSession.create(modelBytes, { executionProviders: ["webgpu"] });
+      const inName = session.inputNames[0];
+      const outName = session.outputNames[0];
+      const run = async (rgba) => {
+        const chw = normalize(rgba);
+        const res = await session.run({ [inName]: new ort.Tensor("float32", chw, [1, 3, SIZE, SIZE]) });
+        const t = res[outName];
+        const data = await t.getData();
+        return { data, t };
+      };
+      return {
+        stats: {},
+        async model(rgba) { const { t } = await run(rgba); t.dispose && t.dispose(); },
+        async e2e(rgba) { const { data, t } = await run(rgba); const r = post(data); t.dispose && t.dispose(); return r; },
+        async output(rgba) { const { data, t } = await run(rgba); const c = Float32Array.from(data); t.dispose && t.dispose(); return c; },
+        destroy() { session.release && session.release(); }
+      };
+    }
+
+    async function createC(modelBytes, f16) {
+      const eng = await createSegEngine({ modelBytes, f16, size: SIZE });
+      return {
+        stats: { f16: eng.stats.f16, dispatches: eng.stats.dispatches, weightBytes: eng.stats.weightBytes, activationBytes: eng.stats.activationBytes, ioBytes: eng.stats.ioBytes, hasTimestamps: eng.stats.hasTimestamps },
+        raw: eng,
+        async model(rgba) { await eng.forward(rgba); },
+        e2e(rgba) { return eng.infer(rgba); },
+        async output(rgba) { await eng.forward(rgba); return eng.readOutput(); },
+        destroy() { eng.destroy(); }
+      };
+    }
+
+    function iou(a, b) {
+      let inter = 0, uni = 0;
+      for (let i = 0; i < N; i++) {
+        const x = a[i * 4 + 3] > 0, y = b[i * 4 + 3] > 0;
+        if (x && y) inter++;
+        if (x || y) uni++;
+      }
+      return uni ? inter / uni : 1;
+    }
+    function drawMask(canvasId, mask) {
+      $(canvasId).getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(mask), SIZE, SIZE), 0, 0);
+    }
+
+    async function timeRuns(fn, warmup, runs, label) {
+      const times = [];
+      for (let i = 0; i < warmup; i++) await fn();
+      for (let i = 0; i < runs; i++) {
+        const t0 = performance.now();
+        await fn();
+        times.push(performance.now() - t0);
+      }
+      log(`${label}: median ${fmt(stats(times).median)} ms over ${runs} runs`);
+      return times;
+    }
+
+    async function runBenchmark() {
+      const btn = $("run");
+      btn.disabled = true;
+      $("export").disabled = true;
+      logEl.textContent = "";
+      const eng = {}; // id -> engine
       try {
-        logLfm("Loading model & processor (onnx-community/LFM2.5-VL-450M-ONNX)...");
-        const t0_load = performance.now();
+        if (!navigator.gpu) throw new Error("WebGPU is not available in this browser.");
+        const sample = $("sample").value;
+        const warmup = Math.max(0, +$("warmup").value | 0);
+        const runs = Math.max(1, +$("runs").value | 0);
+        const prec = $("prec").value;
+        const f16opt = prec === "auto" ? "auto" : prec === "f16";
+        const ids = IDS;
 
-        const processor = await AutoProcessor.from_pretrained("onnx-community/LFM2.5-VL-450M-ONNX");
-        const model = await AutoModelForImageTextToText.from_pretrained("onnx-community/LFM2.5-VL-450M-ONNX", {
-          dtype: {
-            vision_encoder: "q4f16",
-            embed_tokens: "q4f16",
-            decoder_model_merged: "q4f16"
-          },
-          device: "webgpu"
-        });
-        const loadDurationMs = performance.now() - t0_load;
-        logLfm(`✅ Model loaded in ${(loadDurationMs / 1000).toFixed(2)}s`);
+        log("Fetching model and sample...");
+        const modelBytes = new Uint8Array(await (await fetch("/models/u2netp.onnx")).arrayBuffer());
+        const rgba = await loadRgba(sample);
+        $("cIn").getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(rgba), SIZE, SIZE), 0, 0);
+        log(`Model ${mb(modelBytes.byteLength)}, sample ${sample}, engines ${ids.join("")}`);
 
-        logLfm("Reading sample image /samples/tomato.jpg...");
-        const rawImage = await RawImage.read("/samples/tomato.jpg");
-
-        const promptText = "Diagnose this plant leaf in detail, describing observable symptoms, potential disease, and organic remedies:";
-        const messages = [
-          {
-            role: "user",
-            content: [
-              { type: "image" },
-              { type: "text", text: promptText }
-            ]
-          }
-        ];
-
-        const text = processor.apply_chat_template(messages, { add_generation_prompt: true });
-        const inputs = await processor(rawImage, text, { add_special_tokens: false });
-
-        logLfm("Starting token generation stopwatch...");
-
-        let tStart = 0;
-        let tFirstToken = null;
-        let tokenCount = 0;
-
-        const streamer = new TextStreamer(processor.tokenizer, {
-          skip_prompt: true,
-          callback_function: (tokenText) => {
-            if (tFirstToken === null) {
-              tFirstToken = performance.now();
-              const realTtft = tFirstToken - tStart;
-              logLfm(`⚡ TOKEN #1 ARRIVED! Real TTFT: ${realTtft.toFixed(1)} ms`);
-            }
-            tokenCount++;
-            lfmStreamBox.textContent += tokenText;
-            lfmStreamBox.scrollTop = lfmStreamBox.scrollHeight;
-          }
-        });
-
-        tStart = performance.now();
-        await model.generate({
-          ...inputs,
-          max_new_tokens: 128,
-          streamer
-        });
-        const tEnd = performance.now();
-
-        const realTtftMs = tFirstToken ? (tFirstToken - tStart) : 0;
-        const totalGenMs = tEnd - tStart;
-        const decodeMs = tFirstToken ? (tEnd - tFirstToken) : totalGenMs;
-        const realTps = (tokenCount > 1 && decodeMs > 0)
-          ? ((tokenCount - 1) / (decodeMs / 1000))
-          : (tokenCount / (totalGenMs / 1000));
-
-        const resultObj = {
-          mode: modeLabel,
-          loadMs: loadDurationMs,
-          ttftMs: realTtftMs,
-          tokenCount,
-          decodeMs,
-          tps: realTps
+        const factories = {
+          A: () => createA(modelBytes),
+          C: () => createC(modelBytes, f16opt)
         };
 
-        if (useMega) {
-          liveResults.mega = resultObj;
-        } else {
-          liveResults.noMega = resultObj;
+        const init = {}, first = {}, firstOut = {};
+        for (const id of ids) {
+          log(`Init ${id}...`);
+          let t0 = performance.now();
+          eng[id] = await factories[id]();
+          init[id] = performance.now() - t0;
+          t0 = performance.now();
+          firstOut[id] = await eng[id].e2e(rgba);
+          first[id] = performance.now() - t0;
+          log(`${id}: init ${fmt(init[id], 0)} ms, first run ${fmt(first[id], 0)} ms ${JSON.stringify(eng[id].stats)}`);
         }
 
-        renderLfmTable();
-        logLfm(`\n✅ Completed! Tokens: ${tokenCount} | TTFT: ${realTtftMs.toFixed(1)} ms | TPS: ${realTps.toFixed(1)} tokens/sec`);
+        // accuracy vs A (or vs the first engine when A is not selected)
+        const ref = "A";
+        const refOut = await eng[ref].output(rgba);
+        const accuracy = {};
+        for (const id of ids) {
+          const out = id === ref ? refOut : await eng[id].output(rgba);
+          let maxDiff = 0, sum = 0;
+          for (let i = 0; i < N; i++) { const d = Math.abs(refOut[i] - out[i]); if (d > maxDiff) maxDiff = d; sum += d; }
+          accuracy[id] = { maxDiff, meanDiff: sum / N, maskIoU: iou(firstOut[ref].mask, firstOut[id].mask), fg: firstOut[id].fgCount };
+          log(`Accuracy ${id} vs ${ref}: max ${maxDiff.toExponential(2)}, mean ${(sum / N).toExponential(2)}, IoU ${accuracy[id].maskIoU.toFixed(5)}, fg ${firstOut[id].fgCount}`);
+          drawMask(`m${id}`, firstOut[id].mask);
+        }
 
-      } catch (err) {
-        logLfm(`❌ Error: ${err.message}\n${err.stack}`);
-      } finally {
-        disableAll(false);
-      }
-    }
+        // timing: same input, sections interleaved across engines
+        const modelOnly = {}, endToEnd = {};
+        for (const id of ids) modelOnly[id] = stats(await timeRuns(() => eng[id].model(rgba), warmup, runs, `${id} model-only`));
+        for (const id of ids) endToEnd[id] = stats(await timeRuns(() => eng[id].e2e(rgba), warmup, runs, `${id} end-to-end`));
 
-    function renderLfmTable() {
-      lfmTableBody.innerHTML = "";
-      for (const res of [liveResults.noMega, liveResults.mega]) {
-        if (!res) continue;
-        lfmTableBody.innerHTML += `
-          <tr>
-            <td><strong>${res.mode}</strong></td>
-            <td>${(res.loadMs / 1000).toFixed(2)} s</td>
-            <td class="val-highlight">${res.ttftMs.toFixed(1)} ms</td>
-            <td>${res.tokenCount} tokens</td>
-            <td>${res.decodeMs.toFixed(1)} ms</td>
-            <td class="val-speed">${res.tps.toFixed(1)} tokens/sec</td>
-          </tr>
-        `;
-      }
-    }
+        // per-kernel profile for the WGSL engines
+        const prof = {};
+        try { prof.C = await eng.C.raw.profile(rgba); } catch (e) { log(`profile unavailable: ${e.message}`, true); }
 
-    btnRunNoMega.addEventListener("click", () => runRealLfmBenchmark("no-mega"));
-    btnRunMega.addEventListener("click", () => runRealLfmBenchmark("mega"));
-    btnRunBoth.addEventListener("click", async () => {
-      await runRealLfmBenchmark("no-mega");
-      await new Promise(r => setTimeout(r, 1000));
-      await runRealLfmBenchmark("mega");
-    });
-
-    // =========================================================
-    // SECTION 2: SEGMENTATION & CORE CONV BENCHMARK
-    // =========================================================
-    const SAMPLES = [
-      { name: "tomato.jpg", url: "/samples/tomato.jpg" },
-      { name: "corn.jpg", url: "/samples/corn.jpg" },
-      { name: "spinach.jpg", url: "/samples/spinach.jpg" },
-      { name: "potato.jpg", url: "/samples/potato.jpg" }
-    ];
-
-    async function loadImageTensor(url) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = 320;
-          canvas.height = 320;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, 320, 320);
-          const imgData = ctx.getImageData(0, 0, 320, 320).data;
-          const totalPixels = 320 * 320;
-          const floatData = new Float32Array(3 * totalPixels);
-          for (let i = 0; i < totalPixels; i++) {
-            const p = i * 4;
-            floatData[i] = (imgData[p] / 255.0 - 0.485) / 0.229;
-            floatData[totalPixels + i] = (imgData[p + 1] / 255.0 - 0.456) / 0.224;
-            floatData[2 * totalPixels + i] = (imgData[p + 2] / 255.0 - 0.406) / 0.225;
-          }
-          resolve({ floatData, shape: [1, 3, 320, 320] });
+        const report = {
+          userAgent: navigator.userAgent, sample, warmup, runs, engines: ids, ref,
+          init, firstRun: first, modelOnly, endToEnd, accuracy,
+          engineStats: Object.fromEntries(ids.map((id) => [id, eng[id].stats])),
+          kernels: prof
         };
-        img.onerror = reject;
-        img.src = url;
-      });
+        lastReport = report;
+        renderResults(report);
+        renderKernels(prof);
+        $("export").disabled = false;
+        log("Done.");
+      } catch (e) {
+        log(`FAILED: ${(e && e.stack) || e}`, true);
+      } finally {
+        for (const id of Object.keys(eng)) { try { await eng[id].destroy(); } catch {} }
+        btn.disabled = false;
+      }
     }
 
-    btnRunSeg.addEventListener("click", async () => {
-      disableAll(true);
-      segStatus.style.display = "block";
-      segStatus.textContent = "Running segmentation model benchmark...\n";
-
-      try {
-        const ort = await import("onnxruntime-web");
-        if (ort.env && ort.env.wasm) {
-          ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/";
-          ort.env.wasm.numThreads = 1;
-        }
-
-        const wasmSession = await ort.InferenceSession.create("/models/u2netp.onnx", { executionProviders: ["wasm"] });
-        segStatus.textContent += "✅ WASM session initialized.\n";
-
-        await initMegaKernel();
-        const convKernel = await getKernel("webgpu-kernels/ai.onnx.Conv", { version: 1 });
-        segStatus.textContent += "✅ HF WebGPU Conv kernel ready.\n";
-
-        const weightElements = 64 * 3 * 3 * 3;
-        const weightData = new Float32Array(weightElements);
-        for (let i = 0; i < weightElements; i++) weightData[i] = Math.sin(i) * 0.1;
-        const biasData = new Float32Array(64);
-        const convAttrs = { strides: [1, 1], pads: [1, 1, 1, 1], dilations: [1, 1], group: 1 };
-
-        segTableBody.innerHTML = "";
-        convTableBody.innerHTML = "";
-
-        for (const sample of SAMPLES) {
-          const tensorData = await loadImageTensor(sample.url);
-          const ortTensor = new ort.Tensor("float32", tensorData.floatData, [1, 3, 320, 320]);
-
-          // WASM run
-          const t0_w = performance.now();
-          await wasmSession.run({ [wasmSession.inputNames[0]]: ortTensor });
-          const wasmMs = performance.now() - t0_w;
-
-          // Conv kernel run
-          const t0_c = performance.now();
-          await convKernel(
-            { x: { data: tensorData.floatData, shape: [1, 3, 320, 320] }, w: { data: weightData, shape: [64, 3, 3, 3] }, bias: { data: biasData, shape: [64] } },
-            { attrs: convAttrs }
-          );
-          const convMs = performance.now() - t0_c;
-
-          const wasmConvEst = wasmMs * 0.05;
-          const speedup = (wasmConvEst / convMs).toFixed(1) + "x";
-
-          segTableBody.innerHTML += `
-            <tr>
-              <td><strong>${sample.name}</strong></td>
-              <td>${wasmMs.toFixed(1)} ms</td>
-              <td><span style="color:#f87171">Failed (ceil_mode MaxPool)</span></td>
-              <td>WASM Fallback Active</td>
-            </tr>
-          `;
-
-          convTableBody.innerHTML += `
-            <tr>
-              <td><strong>${sample.name}</strong></td>
-              <td>${wasmConvEst.toFixed(1)} ms (WASM)</td>
-              <td class="val-highlight">${convMs.toFixed(1)} ms</td>
-              <td class="val-speed">${speedup}</td>
-            </tr>
-          `;
-        }
-
-        segTableWrap.style.display = "block";
-        segStatus.textContent += "✅ Segmentation benchmark complete!\n";
-      } catch (err) {
-        segStatus.textContent += `❌ Error: ${err.message}\n`;
-      } finally {
-        disableAll(false);
+    function renderResults(r) {
+      const rows = [];
+      const ids = r.engines;
+      const cols = (fn) => IDS.map((id) => (ids.includes(id) ? fn(id) : `<td class="num" style="color:#475569">-</td>`)).join("");
+      const timeRow = (name, get, unit = "ms") => {
+        const base = r.engines.includes("A") ? get("A") : null;
+        const maxv = Math.max(...ids.map((id) => get(id) || 0)) || 1;
+        rows.push(`<tr><td>${name}</td>${cols((id) => {
+          const v = get(id);
+          let tag = "";
+          if (base && id !== "A" && v) {
+            const x = base / v;
+            tag = ` <span class="${x >= 1 ? "win" : "lose"}">${x.toFixed(2)}x</span>`;
+          }
+          return `<td class="num">${fmt(v)} ${unit}${tag}<div class="bar c-${id}" style="width:${((v || 0) / maxv) * 100}%"></div></td>`;
+        })}</tr>`);
+      };
+      const plain = (name, get) => rows.push(`<tr><td>${name}</td>${cols((id) => `<td class="num">${get(id)}</td>`)}</tr>`);
+      const st = (id) => r.engineStats[id] || {};
+      timeRow("Init time", (id) => r.init[id]);
+      timeRow("First run (shader compile)", (id) => r.firstRun[id]);
+      for (const [k, label] of [["modelOnly", "Model-only"], ["endToEnd", "End-to-end"]]) {
+        for (const s of ["median", "mean", "p95", "min"]) timeRow(`${label} ${s}`, (id) => r[k][id][s]);
       }
+      plain("Weights memory", (id) => (id === "A" ? "n/a (ORT)" : mb(st(id).weightBytes)));
+      plain("Activation memory", (id) => (id === "A" ? "n/a (ORT)" : mb(st(id).activationBytes) + " (pool)"));
+      plain("Dispatches / run", (id) => (id === "A" ? "n/a" : st(id).dispatches));
+      plain("Precision", (id) => (id === "A" ? "fp16 model" : st(id).f16 ? "f16" : "f32"));
+      plain(`Max |diff| vs ${r.ref}`, (id) => (id === r.ref ? "-" : r.accuracy[id].maxDiff.toExponential(2)));
+      plain(`Mean |diff| vs ${r.ref}`, (id) => (id === r.ref ? "-" : r.accuracy[id].meanDiff.toExponential(2)));
+      plain(`Mask IoU vs ${r.ref}`, (id) => (id === r.ref ? "-" : r.accuracy[id].maskIoU.toFixed(5)));
+      plain("Foreground pixels", (id) => r.accuracy[id].fg);
+      $("results").querySelector("tbody").innerHTML = rows.join("");
+    }
+
+    function renderKernels(prof) {
+      const card = $("kcard");
+      card.style.display = "block";
+      const by = {};
+      for (const k of prof.C || []) {
+        const e = (by[k.type] ||= { n: 0, ms: 0 });
+        e.n++;
+        e.ms += k.ms;
+      }
+      const total = Object.values(by).reduce((x, e) => x + e.ms, 0) || 1;
+      $("kernels").querySelector("tbody").innerHTML = Object.entries(by).sort((a, b) => b[1].ms - a[1].ms).map(([t, e]) =>
+        `<tr><td>${t}</td><td class="num">${e.n}</td><td class="num">${e.ms.toFixed(3)}</td><td class="num">${((e.ms / total) * 100).toFixed(1)}%<div class="bar c-C" style="width:${(e.ms / total) * 100}%"></div></td></tr>`).join("");
+      $("knote").textContent = `Sum of kernel times: ${total.toFixed(2)} ms. Chrome quantizes timestamps (~100 us) unless run with --enable-dawn-features=allow_unsafe_apis.`;
+    }
+
+    $("run").addEventListener("click", runBenchmark);
+    $("export").addEventListener("click", () => {
+      if (!lastReport) return;
+      const blob = new Blob([JSON.stringify(lastReport, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `seg-benchmark-${Date.now()}.json`;
+      a.click();
     });
+    log(navigator.gpu ? "WebGPU available. Press Run." : "WebGPU NOT available.", !navigator.gpu);
   </script>
 </body>
 </html>
