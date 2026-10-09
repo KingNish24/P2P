@@ -1,10 +1,13 @@
 import {
   AutoProcessor,
-  AutoModelForImageTextToText,
+  AutoConfig,
+  Lfm2ForCausalLM,
   RawImage,
   TextStreamer,
+  Tensor,
   env
 } from '@huggingface/transformers';
+import * as ort from 'onnxruntime-web/webgpu';
 import { StructuredOutputProcessor } from '@huggingface/transformers-structured-output';
 import { getKernel } from '@huggingface/kernels';
 import { initMegaKernel } from './megakernel-client.js';
@@ -26,8 +29,113 @@ if (!isPthread) {
   const MODEL_ID = 'onnx-community/LFM2.5-VL-450M-ONNX';
   const DTYPE = 'q4f16';
 
+  // Staged load: vision stage (vision_encoder + embed_tokens) runs first and is released,
+  // then the text stage (embed_tokens + decoder) runs. Both never sit on the GPU together.
+  const VISION_FILES = [`vision_encoder_${DTYPE}.onnx`, `vision_encoder_${DTYPE}.onnx_data`];
+  const EMBED_FILES = [`embed_tokens_${DTYPE}.onnx`, `embed_tokens_${DTYPE}.onnx_data`];
+  const DECODER_FILES = [`decoder_model_merged_${DTYPE}.onnx`, `decoder_model_merged_${DTYPE}.onnx_data`];
+
   let processor = null;
-  let model = null;
+  let imageTokenId = null;
+
+  function modelFileUrl(file) {
+    const host = env.remoteHost.endsWith('/') ? env.remoteHost : env.remoteHost + '/';
+    return `${host}${MODEL_ID}/resolve/main/onnx/${file}`;
+  }
+
+  // Download a model file into the same Cache API cache transformers.js uses,
+  // so the text stage (loaded by transformers.js) finds it without a second download.
+  async function fetchModelFile(file, onProgress) {
+    const url = modelFileUrl(file);
+    const cache = typeof caches !== 'undefined' ? await caches.open(env.cacheKey || 'transformers-cache') : null;
+    let res = cache ? await cache.match(url) : null;
+    if (res) {
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      onProgress?.(file, bytes.length, bytes.length);
+      return bytes;
+    }
+    const net = await fetch(url);
+    if (!net.ok) throw new Error(`HTTP ${net.status} fetching ${file}`);
+    const total = Number(net.headers.get('content-length')) || 0;
+    const reader = net.body.getReader();
+    const chunks = [];
+    let loaded = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      onProgress?.(file, loaded, total || loaded);
+    }
+    const bytes = new Uint8Array(loaded);
+    let off = 0;
+    for (const c of chunks) { bytes.set(c, off); off += c.length; }
+    if (cache) {
+      try {
+        await cache.put(url, new Response(bytes, { headers: { 'content-length': String(loaded) } }));
+      } catch (e) {
+        console.warn('[ai-worker] Cache put failed for', file, e.message);
+      }
+    }
+    return bytes;
+  }
+
+  async function createStageSession(files, onProgress) {
+    const [modelBytes, dataBytes] = await Promise.all(files.map((f) => fetchModelFile(f, onProgress)));
+    return ort.InferenceSession.create(modelBytes, {
+      executionProviders: ['webgpu'],
+      externalData: [{ path: files[1], data: dataBytes }]
+    });
+  }
+
+  // fp16 <-> fp32 helpers (only used when vision features and token embeddings differ in dtype)
+  const _f32 = new Float32Array(1);
+  const _u32 = new Uint32Array(_f32.buffer);
+  function halfToFloat(h) {
+    const s = (h & 0x8000) ? -1 : 1;
+    const e = (h >> 10) & 0x1f;
+    const m = h & 0x3ff;
+    if (e === 0) return s * Math.pow(2, -14) * (m / 1024);
+    if (e === 31) return m ? NaN : s * Infinity;
+    return s * Math.pow(2, e - 15) * (1 + m / 1024);
+  }
+  function floatToHalf(x) {
+    _f32[0] = x;
+    const b = _u32[0];
+    const sign = (b >>> 16) & 0x8000;
+    const exp = ((b >>> 23) & 0xff) - 127 + 15;
+    const man = b & 0x7fffff;
+    if (((b >>> 23) & 0xff) === 0xff) return sign | 0x7c00 | (man ? 0x200 : 0);
+    if (exp >= 31) return sign | 0x7bff;
+    if (exp <= 0) {
+      if (exp < -10) return sign;
+      const m2 = man | 0x800000;
+      const shift = 14 - exp;
+      let h = m2 >> shift;
+      if ((m2 >> (shift - 1)) & 1) h++;
+      return sign | h;
+    }
+    let h = sign | (exp << 10) | (man >> 13);
+    if (man & 0x1000) h++;
+    return h;
+  }
+  function tensorToFloat32(t) {
+    const d = t.data;
+    if (d instanceof Float32Array) return d;
+    if (d instanceof Uint16Array) {
+      const out = new Float32Array(d.length);
+      for (let i = 0; i < d.length; i++) out[i] = halfToFloat(d[i]);
+      return out;
+    }
+    return Float32Array.from(d); // Float16Array
+  }
+  function writeFromFloat32(target, offset, src) {
+    if (target instanceof Uint16Array) {
+      for (let i = 0; i < src.length; i++) target[offset + i] = floatToHalf(src[i]);
+    } else {
+      target.set(src, offset);
+    }
+  }
 
   async function discoverAvailableHfKernels() {
     try {
@@ -133,8 +241,8 @@ if (!isPthread) {
   };
 
   async function loadModel() {
-    if (processor && model) {
-      return { processor, model };
+    if (processor) {
+      return { processor };
     }
 
     // Check WebGPU hardware availability first
@@ -210,23 +318,26 @@ if (!isPthread) {
 
     const MODEL_FILE_COUNT = 3;
     const progressMap = new Map();
-    const progressCallback = (info) => {
-      if (info.status !== 'progress' || !info.file?.endsWith('.onnx_data') || !info.total) {
+    const reportProgress = (file, loaded, total) => {
+      if (!file?.endsWith('.onnx_data') || !total) {
         return;
       }
-      progressMap.set(info.file, info.loaded / info.total);
+      progressMap.set(file, loaded / total);
       const totalProgress = (Array.from(progressMap.values()).reduce((sum, v) => sum + v, 0) / MODEL_FILE_COUNT) * 100;
-      const loadedMB = (info.loaded / (1024 * 1024)).toFixed(1);
-      const totalMB = (info.total / (1024 * 1024)).toFixed(1);
+      const loadedMB = (loaded / (1024 * 1024)).toFixed(1);
+      const totalMB = (total / (1024 * 1024)).toFixed(1);
       self.postMessage({
         type: 'progress',
         progress: {
-          file: info.file,
+          file,
           progress: Math.min(100, Math.round(totalProgress)),
           loadedMB,
           totalMB
         }
       });
+    };
+    const progressCallback = (info) => {
+      if (info.status === 'progress') reportProgress(info.file, info.loaded, info.total);
     };
 
     try {
@@ -234,23 +345,21 @@ if (!isPthread) {
         progress_callback: progressCallback
       });
 
-      model = await AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
-        dtype: {
-          vision_encoder: "q4f16",
-          embed_tokens: "q4f16",
-          decoder_model_merged: "q4f16",
-        },
-        device: 'webgpu',
-        progress_callback: progressCallback
-      });
+      const config = await AutoConfig.from_pretrained(MODEL_ID);
+      imageTokenId = BigInt(config.image_token_id ?? config.image_token_index);
+
+      // Download weights into the cache only. Nothing is uploaded to the GPU until a stage runs.
+      for (const file of [...VISION_FILES, ...EMBED_FILES, ...DECODER_FILES]) {
+        await fetchModelFile(file, reportProgress);
+      }
 
       self.postMessage({
         type: 'status',
         status: 'ready',
-        message: `LFM2.5 WebGPU Ready! [${tierInfo}]`
+        message: `LFM2.5 WebGPU Ready (staged load)! [${tierInfo}]`
       });
 
-      return { processor, model };
+      return { processor };
     } catch (err) {
       console.error('Failed to load LFM2.5 WebGPU model:', err);
       self.postMessage({
@@ -292,6 +401,86 @@ if (!isPthread) {
     throw new Error('Failed to parse structured diagnosis JSON.');
   }
 
+  // Stage 1: vision_encoder + embed_tokens on WebGPU, merge image features into the
+  // token embeddings, copy the result to CPU, then release both sessions.
+  async function runVisionStage(inputs) {
+    if (ort.env?.wasm && !ort.env.wasm.wasmPaths) {
+      ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
+    }
+    const toOrt = (t) => new ort.Tensor(t.type, t.data, t.dims);
+    const copyOut = async (tensor) => {
+      const out = { type: tensor.type, data: (await tensor.getData()).slice(), dims: [...tensor.dims] };
+      tensor.dispose?.();
+      return out;
+    };
+
+    let feats;
+    let vision = null;
+    try {
+      vision = await createStageSession(VISION_FILES);
+      const feeds = {};
+      for (const name of vision.inputNames) feeds[name] = toOrt(inputs[name]);
+      const result = await vision.run(feeds);
+      feats = await copyOut(result[vision.outputNames[0]]);
+    } finally {
+      if (vision) await vision.release();
+    }
+
+    let emb;
+    let embed = null;
+    try {
+      embed = await createStageSession(EMBED_FILES);
+      const result = await embed.run({ input_ids: toOrt(inputs.input_ids) });
+      emb = await copyOut(result[embed.outputNames[0]]);
+    } finally {
+      if (embed) await embed.release();
+    }
+
+    // Replace each image-token position with its image feature vector
+    const hidden = emb.dims.at(-1);
+    const nFeatures = feats.data.length / hidden;
+    const ids = inputs.input_ids.data;
+    const sameKind = feats.type === emb.type && feats.data.constructor === emb.data.constructor;
+    const featsF32 = sameKind ? null : tensorToFloat32(feats);
+    let k = 0;
+    for (let i = 0; i < ids.length; i++) {
+      if (ids[i] !== imageTokenId) continue;
+      if (k >= nFeatures) throw new Error('More image tokens than image features.');
+      const start = k * hidden;
+      if (sameKind) {
+        emb.data.set(feats.data.subarray(start, start + hidden), i * hidden);
+      } else {
+        writeFromFloat32(emb.data, i * hidden, featsF32.subarray(start, start + hidden));
+      }
+      k++;
+    }
+    if (k !== nFeatures) {
+      throw new Error(`Image tokens (${k}) and image features (${nFeatures}) do not match.`);
+    }
+    return new Tensor(emb.type, emb.data, emb.dims);
+  }
+
+  // Lfm2ForCausalLM drops `inputs_embeds` from generate() kwargs and has no vision methods.
+  // Inject the prepared embeds into the first forward pass only; later steps embed new tokens.
+  function injectInputsEmbeds(textModel, inputsEmbeds, inputs) {
+    const unavailable = () => { throw new Error('Vision stage is not loaded in the text model.'); };
+    textModel.encode_image = unavailable;
+    textModel._merge_input_ids_with_image_features = unavailable;
+
+    let first = true;
+    const originalForward = textModel.forward.bind(textModel);
+    textModel.forward = (modelInputs) => {
+      if (first) {
+        modelInputs.inputs_embeds = inputsEmbeds;
+      } else {
+        modelInputs.inputs_embeds = null;
+        modelInputs.pixel_values = inputs.pixel_values;
+      }
+      first = false;
+      return originalForward(modelInputs);
+    };
+  }
+
   self.addEventListener('message', async (event) => {
     if (!event.data || typeof event.data !== 'object') return;
     const { type, data } = event.data;
@@ -308,7 +497,7 @@ if (!isPthread) {
 
     if (type === 'analyze') {
       try {
-        if (!model || !processor) {
+        if (!processor) {
           await loadModel();
         }
 
@@ -368,13 +557,40 @@ Reasoning must be the first property.`;
           }
         });
 
-        const output = await model.generate({
-          ...inputs,
-          max_new_tokens: 4096,
-          do_sample: false,
-          streamer: streamer,
-          logits_processor: [structuredProcessor]
+        self.postMessage({
+          type: 'status',
+          status: 'analyzing',
+          message: 'Stage 1/2: encoding image (vision weights on GPU, released afterwards)...'
         });
+        const inputsEmbeds = await runVisionStage(inputs);
+
+        self.postMessage({
+          type: 'status',
+          status: 'analyzing',
+          message: 'Stage 2/2: loading text decoder and generating...'
+        });
+
+        let output;
+        let textModel = null;
+        try {
+          textModel = await Lfm2ForCausalLM.from_pretrained(MODEL_ID, {
+            dtype: { embed_tokens: DTYPE, decoder_model_merged: DTYPE },
+            device: 'webgpu'
+          });
+          injectInputsEmbeds(textModel, inputsEmbeds, inputs);
+
+          output = await textModel.generate({
+            input_ids: inputs.input_ids,
+            attention_mask: inputs.attention_mask,
+            max_new_tokens: 4096,
+            do_sample: false,
+            streamer: streamer,
+            logits_processor: [structuredProcessor]
+          });
+        } finally {
+          // Free the decoder GPU memory before the next analysis
+          if (textModel) await textModel.dispose();
+        }
 
         // Slicing and JSON Parsing: prefer rawTokens from streamer (skip_prompt: true)
         const promptLen = inputs.input_ids?.dims?.at(-1) || 0;
