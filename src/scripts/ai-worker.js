@@ -6,13 +6,18 @@ import {
   env
 } from '@huggingface/transformers';
 import { StructuredOutputProcessor } from '@huggingface/transformers-structured-output';
+import { getKernel } from '@huggingface/kernels';
+import { initMegaKernel } from './megakernel-client.js';
 
 // Guard against Emscripten pthread sub-worker re-initialization
 const isPthread = typeof self !== 'undefined' && self.name?.startsWith('em-pthread');
 
 if (!isPthread) {
-  if (typeof self !== 'undefined' && self.location && self.location.hostname !== 'localhost' && self.location.hostname !== '127.0.0.1') {
-    env.remoteHost = self.location.origin + '/hf';
+  if (typeof self !== 'undefined' && self.location && self.location.origin) {
+    const isLocal = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+    if (!isLocal) {
+      env.remoteHost = self.location.origin + '/hf';
+    }
   }
   env.allowLocalModels = false;
   env.backends.onnx.wasm.numThreads = 1;
@@ -23,6 +28,20 @@ if (!isPthread) {
 
   let processor = null;
   let model = null;
+
+  async function discoverAvailableHfKernels() {
+    try {
+      const res = await fetch('https://huggingface.co/api/kernels?author=webgpu-kernels&limit=500');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return new Set(data.map(k => k.id).filter(Boolean));
+      }
+    } catch (e) {
+      console.warn('[ai-worker] Dynamic kernel registry query notice:', e.message);
+    }
+    return new Set();
+  }
 
   function dataUrlToBlob(dataUrl) {
     if (dataUrl instanceof Blob) return dataUrl;
@@ -118,10 +137,75 @@ if (!isPthread) {
       return { processor, model };
     }
 
+    // Check WebGPU hardware availability first
+    if (typeof navigator !== 'undefined' && !navigator.gpu) {
+      const errMsg = 'WebGPU is not supported by your browser or graphics hardware.';
+      self.postMessage({ type: 'error', message: errMsg });
+      throw new Error(errMsg);
+    }
+
+    // -----------------------------------------------------------------
+    // Tier 1: Initialize local MegaKernel bundle and discover available kernels
+    // -----------------------------------------------------------------
     self.postMessage({
       type: 'status',
       status: 'loading',
-      message: 'Loading Gemini Google Gemma4 E2B (q4f16 WebGPU)...'
+      message: 'Tier 1: Loading bundled MegaKernel (200+ WebGPU kernels in memory)...'
+    });
+
+    await initMegaKernel();
+    const registry = await discoverAvailableHfKernels();
+    console.log(`[ai-worker] Registry contains ${registry.size} WebGPU kernels.`);
+
+    // Candidate operator categories needed by LFM (Vision + Transformer Decoder)
+    const CANDIDATE_PATTERNS = [
+      'RotaryEmbedding', // RoPE (ai.onnx.RotaryEmbedding / com.microsoft.RotaryEmbedding)
+      'Softmax',         // Softmax (ai.onnx.Softmax / com.microsoft.BiasSoftmax)
+      'Attention',       // Attention / GQA (ai.onnx.Attention / LinearAttention / GroupQueryAttention)
+      'Normalization',   // LayerNorm / SkipSimplifiedLayerNormalization
+      'MatMul',          // Matrix Multiplication
+      'Conv'             // Patch Convolutions for Vision Encoder
+    ];
+
+    const targetKernels = [];
+    if (registry.size > 0) {
+      for (const kernelId of registry) {
+        if (CANDIDATE_PATTERNS.some(pat => kernelId.includes(pat))) {
+          targetKernels.push(kernelId);
+        }
+      }
+    } else {
+      // Direct fallback if registry list request is restricted
+      targetKernels.push(
+        'webgpu-kernels/ai.onnx.RotaryEmbedding',
+        'webgpu-kernels/ai.onnx.Softmax',
+        'webgpu-kernels/ai.onnx.Attention',
+        'webgpu-kernels/ai.onnx.Conv',
+        'webgpu-kernels/ai.onnx.LayerNormalization',
+        'webgpu-kernels/ai.onnx.MatMul'
+      );
+    }
+
+    const loadedCustomKernels = [];
+    for (const repoId of targetKernels) {
+      try {
+        await getKernel(repoId, { version: 1 });
+        const cleanName = repoId.replace('webgpu-kernels/', '');
+        loadedCustomKernels.push(cleanName);
+        console.log(`[ai-worker] Tier 1: Auto-fetched custom kernel: ${cleanName}`);
+      } catch (e) {
+        // Kernels that are not yet compiled or optional can safely be skipped
+      }
+    }
+
+    const tierInfo = loadedCustomKernels.length > 0
+      ? `WebGPU + ${loadedCustomKernels.length} Custom Kernels (${loadedCustomKernels.slice(0, 4).join(', ')}${loadedCustomKernels.length > 4 ? '...' : ''})`
+      : 'WebGPU Standard';
+
+    self.postMessage({
+      type: 'status',
+      status: 'loading',
+      message: `Tier 2: Loading LFM2.5 Vision Model (${tierInfo})...`
     });
 
     const MODEL_FILE_COUNT = 3;
@@ -163,12 +247,12 @@ if (!isPthread) {
       self.postMessage({
         type: 'status',
         status: 'ready',
-        message: 'Gemini Google Gemma4 E2B WebGPU loaded and ready!'
+        message: `LFM2.5 WebGPU Ready! [${tierInfo}]`
       });
 
       return { processor, model };
     } catch (err) {
-      console.error('Failed to load Gemini Google Gemma4 E2B model:', err);
+      console.error('Failed to load LFM2.5 WebGPU model:', err);
       self.postMessage({
         type: 'error',
         message: `${err.name || 'Error'}: ${err.message || 'Error initializing WebGPU model.'}`

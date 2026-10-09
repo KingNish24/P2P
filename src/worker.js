@@ -40,6 +40,9 @@ export default {
 
       const responseHeaders = new Headers(response.headers);
       responseHeaders.set('Access-Control-Allow-Origin', '*');
+      responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD');
+      responseHeaders.set('Access-Control-Allow-Headers', '*');
+      responseHeaders.set('Access-Control-Expose-Headers', '*');
       responseHeaders.set('Cross-Origin-Resource-Policy', 'cross-origin');
 
       return new Response(response.body, {
