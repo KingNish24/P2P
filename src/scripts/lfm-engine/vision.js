@@ -190,6 +190,7 @@ export async function createVisionEngine({ device, modelBytes, source, onProgres
   const s2dBuf = mk(DOWN_TOKENS * DOWN_DIM * 2, undefined, "s2d_buf");
   const proj1Buf = mk(DOWN_TOKENS * PROJ_HIDDEN * 2, undefined, "proj1_buf");
   const outBuf = mk(DOWN_TOKENS * PROJ_OUT * 2, undefined, "image_features_f16");
+  const readbackStage = mk(DOWN_TOKENS * PROJ_OUT * 2, GPUBufferUsage.MAP_READ | CD, "vision_readback_stage");
 
   // Optional F32 conversion pipeline if an FP32 GPU buffer is fed
   let castPipeline = null;
@@ -428,6 +429,30 @@ export async function createVisionEngine({ device, modelBytes, source, onProgres
     return outBuf;
   }
 
+  /**
+   * Reads back the [256, 1024] FP16 image features from GPU to CPU as Uint16Array.
+   * @returns {Promise<Uint16Array>} FP16 half-bits array of length 256 * 1024
+   */
+  async function readFeatures() {
+    const enc = device.createCommandEncoder({ label: "read_vision_features" });
+    enc.copyBufferToBuffer(outBuf, 0, readbackStage, 0, DOWN_TOKENS * PROJ_OUT * 2);
+    device.queue.submit([enc.finish()]);
+    await readbackStage.mapAsync(GPUMapMode.READ);
+    const u16 = new Uint16Array(readbackStage.getMappedRange().slice(0));
+    readbackStage.unmap();
+    return u16;
+  }
+
+  /**
+   * Dispatches vision encoder and reads back the [256, 1024] FP16 visual token features.
+   * @param {GPUBuffer | Float32Array | Uint16Array} pixelValuesBuffer
+   * @returns {Promise<Uint16Array>} FP16 half-bits array of length 256 * 1024
+   */
+  async function encodeAndRead(pixelValuesBuffer) {
+    encode(pixelValuesBuffer);
+    return await readFeatures();
+  }
+
   /** Release all GPU buffers and pipeline caches. */
   function destroy() {
     for (const b of allBuffers) {
@@ -442,6 +467,8 @@ export async function createVisionEngine({ device, modelBytes, source, onProgres
 
   return {
     encode,
+    readFeatures,
+    encodeAndRead,
     destroy,
     outBuf,
     weights,

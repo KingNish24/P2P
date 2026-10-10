@@ -12,6 +12,7 @@ import { StructuredOutputProcessor } from '@huggingface/transformers-structured-
 import { getKernel } from '@huggingface/kernels';
 import { initMegaKernel } from './megakernel-client.js';
 import { createLfmEngine, requestLfmDevice, MAX_NEW_TOKENS } from './lfm-engine/engine.js';
+import { createVisionEngine } from './lfm-engine/vision.js';
 import { blobSource } from './lfm-engine/weights.js';
 
 // Guard against Emscripten pthread sub-worker re-initialization
@@ -31,15 +32,54 @@ if (!isPthread) {
   const MODEL_ID = 'onnx-community/LFM2.5-VL-450M-ONNX';
   const DTYPE = 'q4f16';
 
-  // Staged load: vision stage (vision_encoder + embed_tokens) runs first and is released,
-  // then the text stage (embed_tokens + decoder) runs. Both never sit on the GPU together.
+  // Vision encoder and decoder models both sit resident in WebGPU memory (<340 MB total).
+  // No offloading or re-downloading between inference passes.
   const VISION_FILES = [`vision_encoder_${DTYPE}.onnx`, `vision_encoder_${DTYPE}.onnx_data`];
   const EMBED_FILES = [`embed_tokens_${DTYPE}.onnx`, `embed_tokens_${DTYPE}.onnx_data`];
   const DECODER_FILES = [`decoder_model_merged_${DTYPE}.onnx`, `decoder_model_merged_${DTYPE}.onnx_data`];
 
   let processor = null;
   let imageTokenId = null;
+  let cachedDevice = null;
+  let cachedVisionEngine = null;
   let cachedEngine = null;
+  let cachedEmbedSession = null;
+
+  async function getSharedDevice() {
+    if (!cachedDevice) {
+      cachedDevice = await requestLfmDevice();
+      cachedDevice.lost?.then((info) => {
+        console.warn('[ai-worker] WebGPU device lost:', info.message);
+        cachedDevice = null;
+        cachedVisionEngine = null;
+        cachedEngine = null;
+      });
+    }
+    return cachedDevice;
+  }
+
+  async function getVisionEngine(onProgress) {
+    if (cachedVisionEngine) return cachedVisionEngine;
+    const [visGraph, visBlob] = await Promise.all([
+      getModelBlob(VISION_FILES[0]).then((b) => b.arrayBuffer()),
+      getModelBlob(VISION_FILES[1])
+    ]);
+    const device = await getSharedDevice();
+    cachedVisionEngine = await createVisionEngine({
+      device,
+      modelBytes: new Uint8Array(visGraph),
+      source: blobSource(visBlob),
+      onProgress
+    });
+    return cachedVisionEngine;
+  }
+
+  async function getEmbedSession() {
+    if (!cachedEmbedSession) {
+      cachedEmbedSession = await createStageSession(EMBED_FILES);
+    }
+    return cachedEmbedSession;
+  }
 
   function modelFileUrl(file) {
     const host = env.remoteHost.endsWith('/') ? env.remoteHost : env.remoteHost + '/';
@@ -418,8 +458,8 @@ if (!isPthread) {
     throw new Error('Failed to parse structured diagnosis JSON.');
   }
 
-  // Stage 1: vision_encoder + embed_tokens on WebGPU, merge image features into the
-  // token embeddings, copy the result to CPU, then release both sessions.
+  // Stage 1: Custom WebGPU vision encoder + token embedding.
+  // Vision encoder weights stay resident in VRAM across requests.
   async function runVisionStage(inputs) {
     if (ort.env?.wasm && !ort.env.wasm.wasmPaths) {
       ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
@@ -431,41 +471,64 @@ if (!isPthread) {
       return out;
     };
 
-    let feats;
-    let vision = null;
+    // 1. Vision features: custom WebGPU vision engine (resident in GPU VRAM, zero reload)
+    let featsU16;
     try {
-      vision = await createStageSession(VISION_FILES);
-      const feeds = {};
-      for (const name of vision.inputNames) feeds[name] = toOrt(inputs[name]);
-      const result = await vision.run(feeds);
-      feats = await copyOut(result[vision.outputNames[0]]);
-    } finally {
-      if (vision) await vision.release();
+      const visT0 = performance.now();
+      const vision = await getVisionEngine();
+      const pixelData = inputs.pixel_values?.data || inputs.pixel_values;
+      featsU16 = await vision.encodeAndRead(pixelData);
+      console.log(`[ai-worker] custom vision encoder: 256 tokens in ${(performance.now() - visT0).toFixed(0)} ms`);
+    } catch (visErr) {
+      console.warn('[ai-worker] Custom vision engine failed, falling back to ORT vision encoder:', visErr);
+      let vision = null;
+      try {
+        vision = await createStageSession(VISION_FILES);
+        const feeds = {};
+        for (const name of vision.inputNames) feeds[name] = toOrt(inputs[name]);
+        const result = await vision.run(feeds);
+        const feats = await copyOut(result[vision.outputNames[0]]);
+        if (feats.data instanceof Uint16Array) {
+          featsU16 = feats.data;
+        } else {
+          featsU16 = new Uint16Array(feats.data.length);
+          for (let i = 0; i < feats.data.length; i++) featsU16[i] = floatToHalf(feats.data[i]);
+        }
+      } finally {
+        if (vision) await vision.release();
+      }
     }
 
-    let emb;
-    let embed = null;
+    // 2. Token embeddings
+    let embedResult;
     try {
-      embed = await createStageSession(EMBED_FILES);
-      const result = await embed.run({ input_ids: toOrt(inputs.input_ids) });
-      emb = await copyOut(result[embed.outputNames[0]]);
-    } finally {
-      if (embed) await embed.release();
+      const embed = await getEmbedSession();
+      embedResult = await embed.run({ input_ids: toOrt(inputs.input_ids) });
+    } catch (e) {
+      console.warn('[ai-worker] Cached embed session failed, recreating:', e);
+      try { await cachedEmbedSession?.release?.(); } catch (_) {}
+      cachedEmbedSession = await createStageSession(EMBED_FILES);
+      embedResult = await cachedEmbedSession.run({ input_ids: toOrt(inputs.input_ids) });
     }
+    const emb = await copyOut(embedResult[cachedEmbedSession.outputNames[0]]);
 
-    // Replace each image-token position with its image feature vector
+    // 3. Replace each image-token position with its image feature vector
     const hidden = emb.dims.at(-1);
-    const nFeatures = feats.data.length / hidden;
+    const nFeatures = featsU16.length / hidden;
     const ids = inputs.input_ids.data;
-    const sameKind = feats.type === emb.type && feats.data.constructor === emb.data.constructor;
-    const featsF32 = sameKind ? null : tensorToFloat32(feats);
+    const sameKind = emb.data instanceof Uint16Array;
+    let featsF32 = null;
+    if (!sameKind) {
+      featsF32 = new Float32Array(featsU16.length);
+      for (let i = 0; i < featsU16.length; i++) featsF32[i] = halfToFloat(featsU16[i]);
+    }
     let k = 0;
     for (let i = 0; i < ids.length; i++) {
       if (ids[i] !== imageTokenId) continue;
       if (k >= nFeatures) throw new Error('More image tokens than image features.');
       const start = k * hidden;
       if (sameKind) {
-        emb.data.set(feats.data.subarray(start, start + hidden), i * hidden);
+        emb.data.set(featsU16.subarray(start, start + hidden), i * hidden);
       } else {
         writeFromFloat32(emb.data, i * hidden, featsF32.subarray(start, start + hidden));
       }
@@ -514,7 +577,7 @@ if (!isPthread) {
         getModelBlob(EMBED_FILES[0]).then((b) => b.arrayBuffer()),
         getModelBlob(EMBED_FILES[1])
       ]);
-      const device = await requestLfmDevice();
+      const device = await getSharedDevice();
       cachedEngine = await createLfmEngine({
         device,
         decoder: { graphBytes: new Uint8Array(decGraph), source: blobSource(decBlob) },
@@ -627,14 +690,14 @@ Reasoning must be the first property.`;
         self.postMessage({
           type: 'status',
           status: 'analyzing',
-          message: 'Stage 1/2: encoding image (vision weights on GPU, released afterwards)...'
+          message: 'Stage 1/2: encoding image (custom WebGPU vision engine resident in VRAM)...'
         });
         const inputsEmbeds = await runVisionStage(inputs);
 
         self.postMessage({
           type: 'status',
           status: 'analyzing',
-          message: 'Stage 2/2: loading text decoder (custom WebGPU engine) and generating...'
+          message: 'Stage 2/2: generating diagnosis with custom WebGPU decoder...'
         });
 
         let decodedText = '';
